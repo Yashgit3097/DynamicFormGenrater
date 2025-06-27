@@ -1,0 +1,47 @@
+import { useState } from "react";
+import axios from "axios";
+
+export default function Login() {
+    const [email, setEmail] = useState("admin@admin.com");
+    const [password, setPassword] = useState("admin@1234");
+
+    const handleLogin = async () => {
+        try {
+            const res = await axios.post("http://localhost:4000/api/login", {
+                email, password
+            });
+            localStorage.setItem("token", res.data.token);
+            window.location.href = "/dashboard";
+        } catch (err) {
+            alert("Login failed");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="p-8 bg-white shadow-md rounded w-80">
+                <h1 className="text-2xl mb-4 font-bold">Admin Login</h1>
+                <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full mb-3 p-2 border"
+                    placeholder="Email"
+                />
+                <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full mb-3 p-2 border"
+                    placeholder="Password"
+                />
+                <button
+                    onClick={handleLogin}
+                    className="w-full bg-blue-600 text-white py-2 rounded"
+                >
+                    Login
+                </button>
+            </div>
+        </div>
+    );
+}
