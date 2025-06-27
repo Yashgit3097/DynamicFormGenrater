@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Local
-mongoose.connect("mongodb://127.0.0.1:27017/dynamic_form_db")
+mongoose.connect("mongodb+srv://yashgithub907:Y%40sh%403097@dynamicformgenrator.00uobzb.mongodb.net/?retryWrites=true&w=majority&appName=DynamicFormGenrator")
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error(err));
 
