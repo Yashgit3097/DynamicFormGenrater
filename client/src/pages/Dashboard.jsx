@@ -7,12 +7,11 @@ export default function Dashboard() {
     const [desc, setDesc] = useState("");
     const [fields, setFields] = useState([]);
     const [expiresAt, setExpiresAt] = useState("");
-    const baseURL = "https://dynamicformgenrater.onrender.com"
 
     const token = localStorage.getItem("token");
 
     const loadEvents = async () => {
-        const res = await axios.get(`${baseURL}/api/events`, {
+        const res = await axios.get("http://localhost:4000/api/events", {
             headers: { Authorization: `Bearer ${token}` },
         });
         setEvents(res.data);
@@ -26,7 +25,7 @@ export default function Dashboard() {
 
     const createEvent = async () => {
         await axios.post(
-            `${baseURL}/api/events`,
+            "http://localhost:4000/api/events",
             {
                 name,
                 description: desc,
@@ -60,7 +59,7 @@ export default function Dashboard() {
 
     const download = async (id) => {
         const res = await axios.get(
-            `${baseURL}/api/events/${id}/download`,
+            `http://localhost:4000/api/events/${id}/download`,
             {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: "blob",
@@ -75,7 +74,7 @@ export default function Dashboard() {
     };
 
     const deleteEvent = async (id) => {
-        await axios.delete(`${baseURL}/api/events/${id}`, {
+        await axios.delete(`http://localhost:4000/api/events/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         loadEvents();

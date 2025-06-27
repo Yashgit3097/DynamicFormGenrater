@@ -6,12 +6,11 @@ export default function UserForm() {
     const { eventId } = useParams();
     const [event, setEvent] = useState(null);
     const [values, setValues] = useState({});
-    const baseURL = "https://dynamicformgenrater.onrender.com"
 
     useEffect(() => {
         const fetchEvent = async () => {
             try {
-                const res = await axios.get(`${baseURL}/api/events/${eventId}`);
+                const res = await axios.get(`http://localhost:4000/api/events/${eventId}`);
                 setEvent(res.data);
             } catch (err) {
                 alert("Link expired or not found");
@@ -21,7 +20,7 @@ export default function UserForm() {
     }, [eventId]);
 
     const handleSubmit = async () => {
-        await axios.post(`${baseURL}/api/events/${eventId}/submit`, values);
+        await axios.post(`http://localhost:4000/api/events/${eventId}/submit`, values);
         alert("Submitted!");
     };
 
