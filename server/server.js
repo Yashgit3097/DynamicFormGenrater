@@ -1,4 +1,5 @@
-// server.js
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';  // New PDF library
+import fs from "fs";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -7,7 +8,6 @@ import bcrypt from "bcryptjs";
 import cron from "node-cron";
 import { Event, Submission } from "./models.js";
 import { createObjectCsvWriter } from "csv-writer";
-import fs from "fs";
 
 const app = express();
 app.use(cors());
@@ -96,35 +96,255 @@ app.delete("/api/events/:id", auth, async (req, res) => {
   res.send("Deleted");
 });
 
-app.get("/api/events/:id/download", auth, async (req, res) => {
-  const submissions = await Submission.find({ eventId: req.params.id });
-  const event = await Event.findById(req.params.id);
+// Live view route - returns JSON data for tabular display
+app.get("/api/events/:id/live-view", auth, async (req, res) => {
+  try {
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
 
-  // Make header: ID, each field label, CreatedAt
-  const headers = [
-    { id: "_id", title: "ID" },
-    ...event.fields.map(f => ({ id: f.label, title: f.label })),
-    { id: "createdAt", title: "Submitted At" },
-  ];
+    if (!event) return res.status(404).send("Event not found");
+    if (!submissions?.length) return res.status(404).send("No submissions found");
 
-  // Build records
-  const records = submissions.map(s => {
-    const row = { _id: s._id, createdAt: s.createdAt };
-    event.fields.forEach(f => {
-      row[f.label] = s.data[f.label] || "";
+    // Get all field labels and detect number fields
+    const allFields = event.fields.map(f => f.label);
+    const numberFields = event.fields
+      .filter(f => f.type === "number" || f.type === "Number")
+      .map(f => f.label);
+
+    // Initialize totals
+    const totals = {};
+    numberFields.forEach(label => (totals[label] = 0));
+
+    // Prepare data and calculate totals
+    const rows = submissions.map(sub => {
+      const row = {};
+      allFields.forEach(label => {
+        const val = sub.data[label];
+        row[label] = val ?? "";
+
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+      });
+      row.createdAt = new Date(sub.createdAt).toLocaleString();
+      return row;
     });
-    return row;
-  });
 
-  const csvWriter = createObjectCsvWriter({
-    path: "submissions.csv",
-    header: headers,
-  });
+    // Prepare response
+    const response = {
+      eventName: event.name,
+      fields: allFields,
+      numberFields,
+      submissions: rows,
+      totals: numberFields.length > 0 ? totals : null,
+      lastUpdated: new Date().toISOString()
+    };
 
-  await csvWriter.writeRecords(records);
+    res.json(response);
 
-  res.download("submissions.csv");
+  } catch (err) {
+    console.error("Error generating live view:", err);
+    res.status(500).send("Error generating live view");
+  }
 });
+
+app.get("/api/events/:id/download", auth, async (req, res) => {
+  try {
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).send("Event not found");
+    if (!submissions?.length) return res.status(404).send("No submissions found");
+
+    // Get all field labels and detect number fields (even if not properly typed)
+    const allFields = event.fields.map(f => f.label);
+    const numberFields = event.fields
+      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
+      .map(f => f.label);
+
+    console.log("Auto-detected number fields:", numberFields); // This should now include 'sankhya'
+
+    // CSV Headers
+    const headers = [
+      ...allFields.map(label => ({ id: label, title: label })),
+      { id: "createdAt", title: "Submitted At" },
+    ];
+
+    // Initialize totals
+    const totals = {};
+    numberFields.forEach(label => (totals[label] = 0));
+
+    // Process submissions
+    const records = submissions.map(sub => {
+      const record = {};
+      allFields.forEach(label => {
+        const val = sub.data[label];
+        record[label] = val ?? "";
+
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+      });
+      record.createdAt = new Date(sub.createdAt).toLocaleString();
+      return record;
+    });
+
+    // Add total row if we found any number fields
+    if (numberFields.length > 0) {
+      const totalRow = Object.fromEntries(
+        allFields.map(label => [
+          label, 
+          numberFields.includes(label) ? totals[label] : ""
+        ])
+      );
+      totalRow.createdAt = "TOTAL";
+      records.push(totalRow);
+    }
+
+    // Generate CSV
+    const csvWriter = createObjectCsvWriter({
+      path: "submissions.csv",
+      header: headers,
+    });
+    await csvWriter.writeRecords(records);
+
+    res.download("submissions.csv", `submissions_${event._id}.csv`, (err) => {
+      fs.unlink("submissions.csv", () => {});
+      if (err) console.error("Download failed:", err);
+    });
+
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
+  try {
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).send("Event not found");
+    if (!submissions?.length) return res.status(404).send("No submissions found");
+
+    // Get all field labels and detect number fields
+    const allFields = event.fields.map(f => f.label);
+    const numberFields = event.fields
+      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
+      .map(f => f.label);
+
+    // Initialize totals
+    const totals = {};
+    numberFields.forEach(label => (totals[label] = 0));
+
+    // Create a new PDF document
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 800]);
+    const { width, height } = page.getSize();
+    const fontSize = 12;
+    const margin = 50;
+    
+    // Load fonts
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Add title
+    page.drawText(`Submissions for ${event.name}`, {
+      x: margin,
+      y: height - margin - 20,
+      size: 16,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+
+    // Prepare data and calculate totals
+    let y = height - margin - 50;
+    const colWidth = (width - margin * 2) / (allFields.length + 1);
+
+    // Draw table headers
+    allFields.forEach((label, i) => {
+      page.drawText(label, {
+        x: margin + i * colWidth,
+        y,
+        size: fontSize,
+        font: boldFont,
+      });
+    });
+    page.drawText("Submitted At", {
+      x: margin + allFields.length * colWidth,
+      y,
+      size: fontSize,
+      font: boldFont,
+    });
+    y -= 20;
+
+    // Draw table rows
+    for (const sub of submissions) {
+      const row = {};
+      allFields.forEach(label => {
+        const val = sub.data[label];
+        row[label] = val ?? "";
+
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+      });
+      row.createdAt = new Date(sub.createdAt).toLocaleString();
+
+      allFields.forEach((label, i) => {
+        page.drawText(String(row[label] || ""), {
+          x: margin + i * colWidth,
+          y,
+          size: fontSize,
+          font,
+        });
+      });
+      page.drawText(row.createdAt, {
+        x: margin + allFields.length * colWidth,
+        y,
+        size: fontSize,
+        font,
+      });
+      y -= 20;
+    }
+
+    // Add totals row
+    if (numberFields.length > 0) {
+      y -= 20;
+      allFields.forEach((label, i) => {
+        const value = numberFields.includes(label) ? totals[label] : "";
+        page.drawText(String(value), {
+          x: margin + i * colWidth,
+          y,
+          size: fontSize,
+          font: boldFont,
+        });
+      });
+      page.drawText("TOTAL", {
+        x: margin + allFields.length * colWidth,
+        y,
+        size: fontSize,
+        font: boldFont,
+      });
+    }
+
+    // Finalize PDF
+    const pdfBytes = await pdfDoc.save();
+    
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="submissions_${event._id}.pdf"`);
+    res.send(pdfBytes);
+
+  } catch (err) {
+    console.error("Error generating PDF:", err);
+    res.status(500).send("Error generating PDF");
+  }
+});
+
 
 // Cron job: Delete expired events + submissions after 2 days
 cron.schedule("0 0 * * *", async () => {
