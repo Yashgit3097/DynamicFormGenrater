@@ -318,44 +318,46 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const totals = {};
     numberFields.forEach(label => (totals[label] = 0));
 
-    // ✅ Font setup
+    // Font setup
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
     const fontBytes = fs.readFileSync(fontPath);
 
     const pdfDoc = await PDFDocument.create();
     const fontkit = (await import("fontkit")).default;
     pdfDoc.registerFontkit(fontkit);
-
     const font = await pdfDoc.embedFont(fontBytes);
-    let page = pdfDoc.addPage([800, 1000]); // Wider page
+
+    let page = pdfDoc.addPage([800, 1000]);
     const { width, height } = page.getSize();
-    const fontSize = 11;
-    const margin = 30;
+
+    const fontSize = 10;
+    const margin = 40;
     const lineHeight = fontSize + 4;
-    const colWidth = (width - margin * 2) / (allFields.length + 1);
+    const colCount = allFields.length + 1;
+    const colWidth = (width - margin * 2) / colCount;
 
     let y = height - margin;
 
-    // 🧠 Helper to wrap text
+    // Helper to wrap text in column
     const wrapText = (text, maxWidth) => {
       const words = String(text || "").split(" ");
       const lines = [];
-      let currentLine = "";
+      let line = "";
 
       for (const word of words) {
-        const testLine = currentLine + word + " ";
-        if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth && currentLine) {
-          lines.push(currentLine.trim());
-          currentLine = word + " ";
+        const test = line + word + " ";
+        if (font.widthOfTextAtSize(test, fontSize) > maxWidth) {
+          lines.push(line.trim());
+          line = word + " ";
         } else {
-          currentLine = testLine;
+          line = test;
         }
       }
-      if (currentLine) lines.push(currentLine.trim());
+      if (line) lines.push(line.trim());
       return lines;
     };
 
-    // 📝 Title
+    // Title
     y -= 20;
     page.drawText(`Submissions for ${event.name}`, {
       x: margin,
@@ -367,44 +369,48 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
 
     y -= 30;
 
-    // Header
-    allFields.forEach((label, i) => {
+    // Draw table headers
+    const headers = [...allFields, "Submitted At"];
+    const headerHeight = lineHeight;
+    headers.forEach((label, i) => {
+      const x = margin + i * colWidth;
+      page.drawRectangle({
+        x,
+        y: y - headerHeight,
+        width: colWidth,
+        height: headerHeight,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.5,
+      });
       page.drawText(label, {
-        x: margin + i * colWidth,
-        y,
+        x: x + 2,
+        y: y - fontSize - 2,
         size: fontSize,
         font,
+        color: rgb(0, 0, 0),
       });
     });
-    page.drawText("Submitted At", {
-      x: margin + allFields.length * colWidth,
-      y,
-      size: fontSize,
-      font,
-    });
 
-    y -= lineHeight;
+    y -= headerHeight;
 
-    // Rows
+    // Table rows
     for (const sub of submissions) {
       const row = {};
       allFields.forEach(label => {
         const val = sub.data[label];
         row[label] = val ?? "";
-
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
         }
       });
-      row.createdAt = new Date(sub.createdAt).toLocaleString();
+      row["Submitted At"] = new Date(sub.createdAt).toLocaleString();
 
-      // 🧠 Wrap each column
-      const rowLines = allFields.map(label => wrapText(row[label], colWidth));
-      rowLines.push(wrapText(row.createdAt, colWidth));
-
-      const maxLines = Math.max(...rowLines.map(r => r.length));
-      const rowHeight = maxLines * lineHeight;
+      // Wrap all cell values
+      const rowValues = [...allFields, "Submitted At"].map(label =>
+        wrapText(row[label], colWidth - 4)
+      );
+      const rowHeight = Math.max(...rowValues.map(v => v.length)) * lineHeight;
 
       // Page break
       if (y - rowHeight < margin + 30) {
@@ -412,13 +418,27 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
         y = height - margin;
       }
 
-      rowLines.forEach((lines, i) => {
+      // Draw cells with borders and text
+      rowValues.forEach((lines, i) => {
+        const x = margin + i * colWidth;
+        // Draw cell box
+        page.drawRectangle({
+          x,
+          y: y - rowHeight,
+          width: colWidth,
+          height: rowHeight,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+
+        // Draw wrapped text
         lines.forEach((line, j) => {
           page.drawText(line, {
-            x: margin + i * colWidth,
-            y: y - j * lineHeight,
+            x: x + 2,
+            y: y - (j + 1) * lineHeight + 4,
             size: fontSize,
             font,
+            color: rgb(0, 0, 0),
           });
         });
       });
@@ -426,36 +446,47 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       y -= rowHeight;
     }
 
-    // Totals
+    // Totals row
     if (numberFields.length > 0) {
-      y -= 10;
-      allFields.forEach((label, i) => {
-        const value = numberFields.includes(label) ? totals[label] : "";
-        page.drawText(String(value), {
-          x: margin + i * colWidth,
-          y,
+      const totalsRow = allFields.map(label =>
+        numberFields.includes(label) ? String(totals[label]) : ""
+      );
+      totalsRow.push("TOTAL");
+
+      const rowHeight = lineHeight;
+
+      totalsRow.forEach((text, i) => {
+        const x = margin + i * colWidth;
+        page.drawRectangle({
+          x,
+          y: y - rowHeight,
+          width: colWidth,
+          height: rowHeight,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+        page.drawText(text, {
+          x: x + 2,
+          y: y - fontSize - 2,
           size: fontSize,
           font,
+          color: rgb(0, 0, 0),
         });
       });
-      page.drawText("TOTAL", {
-        x: margin + allFields.length * colWidth,
-        y,
-        size: fontSize,
-        font,
-      });
+
+      y -= rowHeight;
     }
 
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.pdf"`);
     res.send(Buffer.from(pdfBytes));
-
   } catch (err) {
     console.error("Error generating PDF:", err);
     res.status(500).send("Error generating PDF");
   }
 });
+
 
 
 
