@@ -51,21 +51,19 @@ app.post("/api/events", auth, async (req, res) => {
   await event.save();
   res.json(event);
 });
-// Add this to your server.js
-app.get("/api/verify-token", async (req, res) => {
+app.get("/api/verify-token", auth, async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ isValid: false, message: "No token provided" });
-    }
-
-    jwt.verify(token, JWT_SECRET);
-    res.json({ isValid: true, message: "Token is valid" });
+    // If the auth middleware passed, the token is valid
+    res.json({ 
+      isValid: true,
+      user: req.user,
+      message: "Token is valid"
+    });
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ isValid: false, message: "Token expired" });
-    }
-    res.status(401).json({ isValid: false, message: "Invalid token" });
+    res.status(500).json({ 
+      isValid: false,
+      message: "Error verifying token"
+    });
   }
 });
 // Get all events
@@ -237,55 +235,49 @@ app.get("/api/events/:id/download", auth, async (req, res) => {
   }
 });
 
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
-const Submission = require('../models/Submission'); // adjust path as needed
-const Event = require('../models/Event'); // adjust path as needed
-
 app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
   try {
-    const eventId = req.params.id;
-    const event = await Event.findById(eventId);
-    const submissions = await Submission.find({ eventId });
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
 
     if (!event) return res.status(404).send("Event not found");
     if (!submissions?.length) return res.status(404).send("No submissions found");
 
+    // Get all field labels and detect number fields
     const allFields = event.fields.map(f => f.label);
     const numberFields = event.fields
-      .filter(f =>
-        f.type.toLowerCase() === "number" ||
-        /^\d+$/.test(submissions[0]?.data[f.label]?.toString())
-      )
+      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
       .map(f => f.label);
 
+    // Initialize totals
     const totals = {};
-    numberFields.forEach(label => totals[label] = 0);
+    numberFields.forEach(label => (totals[label] = 0));
 
+    // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([600, 800]);
     const { width, height } = page.getSize();
-    const fontSize = 10;
-    const margin = 40;
-
+    const fontSize = 12;
+    const margin = 50;
+    
+    // Load fonts
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    let y = height - margin;
-
-    // Title
+    // Add title
     page.drawText(`Submissions for ${event.name}`, {
       x: margin,
-      y: y - 20,
+      y: height - margin - 20,
       size: 16,
       font: boldFont,
       color: rgb(0, 0, 0),
     });
 
-    y -= 50;
+    // Prepare data and calculate totals
+    let y = height - margin - 50;
+    const colWidth = (width - margin * 2) / (allFields.length + 1);
 
-    const colWidth = (width - 2 * margin) / (allFields.length + 1);
-
-    // Header row
+    // Draw table headers
     allFields.forEach((label, i) => {
       page.drawText(label, {
         x: margin + i * colWidth,
@@ -300,14 +292,15 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       size: fontSize,
       font: boldFont,
     });
-
     y -= 20;
 
+    // Draw table rows
     for (const sub of submissions) {
       const row = {};
       allFields.forEach(label => {
         const val = sub.data[label];
         row[label] = val ?? "";
+
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
@@ -316,33 +309,25 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       row.createdAt = new Date(sub.createdAt).toLocaleString();
 
       allFields.forEach((label, i) => {
-        page.drawText(String(row[label]), {
+        page.drawText(String(row[label] || ""), {
           x: margin + i * colWidth,
           y,
           size: fontSize,
           font,
         });
       });
-
       page.drawText(row.createdAt, {
         x: margin + allFields.length * colWidth,
         y,
         size: fontSize,
         font,
       });
-
       y -= 20;
-
-      // Add new page if needed
-      if (y < margin + 40) {
-        y = height - margin;
-        page = pdfDoc.addPage([600, 800]);
-      }
     }
 
     // Add totals row
     if (numberFields.length > 0) {
-      y -= 10;
+      y -= 20;
       allFields.forEach((label, i) => {
         const value = numberFields.includes(label) ? totals[label] : "";
         page.drawText(String(value), {
@@ -352,7 +337,6 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
           font: boldFont,
         });
       });
-
       page.drawText("TOTAL", {
         x: margin + allFields.length * colWidth,
         y,
@@ -361,21 +345,19 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       });
     }
 
+    // Finalize PDF
     const pdfBytes = await pdfDoc.save();
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="submissions_${event._id}.pdf"`
-    );
-    res.send(Buffer.from(pdfBytes));
+    
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="submissions_${event._id}.pdf"`);
+    res.send(pdfBytes);
 
   } catch (err) {
-    console.error("PDF generation error:", err);
+    console.error("Error generating PDF:", err);
     res.status(500).send("Error generating PDF");
   }
 });
-
 
 
 // Cron job: Delete expired events + submissions after 2 days
