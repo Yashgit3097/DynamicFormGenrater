@@ -416,7 +416,7 @@ export default function Dashboard() {
 
                                         <motion.button
                                             onClick={() => {
-                                                const link = `${window.location.origin}/form/${ev._id}`;
+                                                const link = `${window.location.origin}/#/form/${ev._id}`;
                                                 navigator.clipboard.writeText(link)
                                                     .then(() => {
                                                         setIsCopied(true);
