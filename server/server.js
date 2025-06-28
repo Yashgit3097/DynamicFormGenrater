@@ -1,5 +1,7 @@
-const { PDFDocument, rgb } = require("pdf-lib");
-const path = require("path");
+// const { PDFDocument, rgb } = require("pdf-lib");
+// const path = require("path");
+import {PDFDocument, rgb} from "pdf-lib"
+import path from "path";
 import fs from "fs";
 import express from "express";
 import mongoose from "mongoose";
