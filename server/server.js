@@ -96,14 +96,29 @@ app.get("/api/events/:id", async (req, res) => {
   res.json(event);
 });
 
-// Delete a specific submission
-app.delete("/api/submissions/:id", auth, async (req, res) => {
+// Delete multiple submissions
+app.delete("/api/submissions", auth, async (req, res) => {
   try {
-    const deleted = await Submission.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).send("Submission not found");
-    res.send("Submission deleted successfully");
+    const { submissionIds } = req.body;
+    
+    if (!submissionIds || !Array.isArray(submissionIds)) {
+      return res.status(400).send("Invalid submission IDs");
+    }
+
+    const result = await Submission.deleteMany({ 
+      _id: { $in: submissionIds } 
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send("No submissions found to delete");
+    }
+
+    res.send({
+      message: `${result.deletedCount} submission(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
   } catch (err) {
-    console.error("Error deleting submission:", err);
+    console.error("Error deleting submissions:", err);
     res.status(500).send("Server error");
   }
 });
