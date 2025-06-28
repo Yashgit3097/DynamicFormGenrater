@@ -316,114 +316,134 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       .map(f => f.label);
 
     const totals = {};
-    numberFields.forEach(label => totals[label] = 0);
+    numberFields.forEach(label => (totals[label] = 0));
 
+    // ✅ Font setup
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
     const fontBytes = fs.readFileSync(fontPath);
 
     const pdfDoc = await PDFDocument.create();
-    PDFDocument.prototype.registerFontkit.call(pdfDoc, require("fontkit"));
-    const gujaratiFont = await pdfDoc.embedFont(fontBytes);
+    const fontkit = (await import("fontkit")).default;
+    pdfDoc.registerFontkit(fontkit);
 
-    let page = pdfDoc.addPage([600, 800]);
+    const font = await pdfDoc.embedFont(fontBytes);
+    let page = pdfDoc.addPage([800, 1000]); // Wider page
     const { width, height } = page.getSize();
-    const fontSize = 10;
+    const fontSize = 11;
     const margin = 30;
-    const usableWidth = width - margin * 2;
-    const colCount = allFields.length + 1;
-    const colWidth = usableWidth / colCount;
     const lineHeight = fontSize + 4;
+    const colWidth = (width - margin * 2) / (allFields.length + 1);
 
-    const wrapText = (text, maxWidth, font, fontSize) => {
-      const words = String(text).split(" ");
+    let y = height - margin;
+
+    // 🧠 Helper to wrap text
+    const wrapText = (text, maxWidth) => {
+      const words = String(text || "").split(" ");
       const lines = [];
       let currentLine = "";
 
       for (const word of words) {
         const testLine = currentLine + word + " ";
-        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
-        if (textWidth > maxWidth && currentLine !== "") {
+        if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth && currentLine) {
           lines.push(currentLine.trim());
           currentLine = word + " ";
         } else {
           currentLine = testLine;
         }
       }
-
       if (currentLine) lines.push(currentLine.trim());
       return lines;
     };
 
-    let y = height - margin;
-
-    const drawRow = (rowData, isHeader = false) => {
-      const rowLines = allFields.map(label => {
-        return wrapText(rowData[label] ?? "", colWidth, gujaratiFont, fontSize);
-      });
-      rowLines.push(wrapText(rowData.createdAt ?? "", colWidth, gujaratiFont, fontSize));
-
-      const rowHeight = Math.max(...rowLines.map(lines => lines.length)) * lineHeight;
-
-      if (y - rowHeight < margin) {
-        page = pdfDoc.addPage([600, 800]);
-        y = height - margin;
-      }
-
-      rowLines.forEach((lines, colIndex) => {
-        lines.forEach((line, lineIndex) => {
-          page.drawText(line, {
-            x: margin + colIndex * colWidth,
-            y: y - lineIndex * lineHeight,
-            size: fontSize,
-            font: gujaratiFont,
-          });
-        });
-      });
-
-      y -= rowHeight;
-    };
-
-    // Title
+    // 📝 Title
     y -= 20;
     page.drawText(`Submissions for ${event.name}`, {
       x: margin,
       y,
       size: 16,
-      font: gujaratiFont,
+      font,
       color: rgb(0, 0, 0),
     });
 
     y -= 30;
 
-    // Header row
-    const headerRow = {};
-    allFields.forEach(label => (headerRow[label] = label));
-    headerRow.createdAt = "Submitted At";
-    drawRow(headerRow, true);
+    // Header
+    allFields.forEach((label, i) => {
+      page.drawText(label, {
+        x: margin + i * colWidth,
+        y,
+        size: fontSize,
+        font,
+      });
+    });
+    page.drawText("Submitted At", {
+      x: margin + allFields.length * colWidth,
+      y,
+      size: fontSize,
+      font,
+    });
 
-    // Data rows
+    y -= lineHeight;
+
+    // Rows
     for (const sub of submissions) {
       const row = {};
       allFields.forEach(label => {
         const val = sub.data[label];
         row[label] = val ?? "";
+
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
         }
       });
       row.createdAt = new Date(sub.createdAt).toLocaleString();
-      drawRow(row);
+
+      // 🧠 Wrap each column
+      const rowLines = allFields.map(label => wrapText(row[label], colWidth));
+      rowLines.push(wrapText(row.createdAt, colWidth));
+
+      const maxLines = Math.max(...rowLines.map(r => r.length));
+      const rowHeight = maxLines * lineHeight;
+
+      // Page break
+      if (y - rowHeight < margin + 30) {
+        page = pdfDoc.addPage([800, 1000]);
+        y = height - margin;
+      }
+
+      rowLines.forEach((lines, i) => {
+        lines.forEach((line, j) => {
+          page.drawText(line, {
+            x: margin + i * colWidth,
+            y: y - j * lineHeight,
+            size: fontSize,
+            font,
+          });
+        });
+      });
+
+      y -= rowHeight;
     }
 
-    // Totals row
+    // Totals
     if (numberFields.length > 0) {
-      const totalRow = {};
-      allFields.forEach(label => {
-        totalRow[label] = numberFields.includes(label) ? totals[label] : "";
+      y -= 10;
+      allFields.forEach((label, i) => {
+        const value = numberFields.includes(label) ? totals[label] : "";
+        page.drawText(String(value), {
+          x: margin + i * colWidth,
+          y,
+          size: fontSize,
+          font,
+        });
       });
-      totalRow.createdAt = "TOTAL";
-      drawRow(totalRow);
+      page.drawText("TOTAL", {
+        x: margin + allFields.length * colWidth,
+        y,
+        size: fontSize,
+        font,
+      });
     }
 
     const pdfBytes = await pdfDoc.save();
