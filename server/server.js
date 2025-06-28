@@ -51,7 +51,23 @@ app.post("/api/events", auth, async (req, res) => {
   await event.save();
   res.json(event);
 });
+// Add this to your server.js
+app.get("/api/verify-token", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ isValid: false, message: "No token provided" });
+    }
 
+    jwt.verify(token, JWT_SECRET);
+    res.json({ isValid: true, message: "Token is valid" });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ isValid: false, message: "Token expired" });
+    }
+    res.status(401).json({ isValid: false, message: "Invalid token" });
+  }
+});
 // Get all events
 app.get("/api/events", auth, async (req, res) => {
   const events = await Event.find();
