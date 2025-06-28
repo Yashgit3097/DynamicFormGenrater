@@ -215,7 +215,7 @@ export default function Dashboard() {
                     </motion.h1>
                     <button
                         onClick={handleLogout}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 self-center md:self-auto"
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 self-center md:self-auto cursor-pointer"
                     >
                         Logout
                     </button>
@@ -273,7 +273,7 @@ export default function Dashboard() {
                         <div className="flex items-end">
                             <button
                                 onClick={addField}
-                                className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg mr-2 transition-all duration-200 w-full"
+                                className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg mr-2 transition-all duration-200 w-full cursor-pointer"
                             >
                                 ➕ Add Field
                             </button>
@@ -316,7 +316,7 @@ export default function Dashboard() {
                                     <button
                                         type="button"
                                         onClick={() => removeField(i)}
-                                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 w-full"
+                                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 w-full cursor-pointer"
                                     >
                                         ❌ Remove Field
                                     </button>
@@ -329,7 +329,7 @@ export default function Dashboard() {
                         <button
                             onClick={createEvent}
                             disabled={isCreating}
-                            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center ${isCreating ? 'opacity-75' : ''}`}
+                            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-200 flex cursor-pointer items-center ${isCreating ? 'opacity-75' : ''}`}
                         >
                             {isCreating ? (
                                 <>
@@ -409,7 +409,7 @@ export default function Dashboard() {
                                             to={`/form/${ev._id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 underline flex items-center text-sm"
+                                            className="text-blue-600 hover:text-blue-800 underline flex items-center text-sm cursor-pointer"
                                         >
                                             🔗 Open Form
                                         </Link>
@@ -426,7 +426,7 @@ export default function Dashboard() {
                                                         alert("Failed to copy link.");
                                                     });
                                             }}
-                                            className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
+                                            className={`flex items-center gap-1 px-3 py-1 rounded-lg cursor-pointer text-sm text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                                                 }`}
                                             whileTap={{ scale: 0.95 }}
                                             animate={{
@@ -450,25 +450,25 @@ export default function Dashboard() {
 
                                         <button
                                             onClick={() => fetchLiveView(ev._id)}
-                                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200"
+                                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
                                         >
                                             👁️ Live View
                                         </button>
                                         <button
                                             onClick={() => downloadCSV(ev._id)}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200"
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
                                         >
                                             📊 CSV
                                         </button>
                                         <button
                                             onClick={() => downloadPDF(ev._id)}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200"
+                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
                                         >
                                             📄 PDF
                                         </button>
                                         <button
                                             onClick={() => deleteEvent(ev._id)}
-                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200"
+                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
                                         >
                                             🗑️ Delete
                                         </button>
@@ -504,7 +504,7 @@ export default function Dashboard() {
                                         <button
                                             onClick={refreshLiveView}
                                             disabled={isLoading}
-                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors"
+                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors cursor-pointer"
                                         >
                                             {isLoading ? (
                                                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -518,7 +518,7 @@ export default function Dashboard() {
                                         </button>
                                         <button
                                             onClick={closeLiveView}
-                                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
                                         >
                                             ✕ Close
                                         </button>
