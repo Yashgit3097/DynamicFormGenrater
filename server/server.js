@@ -7,13 +7,21 @@ import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+
+// ✅ For PDF generation and Gujarati font support
 import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "fontkit"; // ✅ Required for custom fonts like Gujarati
+
+// ✅ Your MongoDB models
 import { Event, Submission } from "./models.js";
+
+// ✅ For generating downloadable CSVs
 import { createObjectCsvWriter } from "csv-writer";
 
 // ✅ Fix for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 
 
 const app = express();
@@ -169,7 +177,6 @@ app.get("/api/events/:id/live-view", auth, async (req, res) => {
     res.status(500).send("Error generating live view");
   }
 });
-
 app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });
@@ -186,13 +193,14 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const totals = {};
     numberFields.forEach(label => (totals[label] = 0));
 
+    // ✅ Load and embed Gujarati font
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
     const fontBytes = fs.readFileSync(fontPath);
-
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     const font = await pdfDoc.embedFont(fontBytes);
-    let page = pdfDoc.addPage([600, 800]);
 
+    let page = pdfDoc.addPage([600, 800]);
     const { width, height } = page.getSize();
     const fontSize = 10;
     const margin = 40;
@@ -208,6 +216,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     let y = height - margin - 40;
     const colWidth = (width - margin * 2) / (allFields.length + 1);
 
+    // Headers
     allFields.forEach((label, i) => {
       page.drawText(label, {
         x: margin + i * colWidth,
@@ -226,6 +235,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
 
     y -= 20;
 
+    // Table rows
     for (const sub of submissions) {
       const row = {};
       allFields.forEach(label => {
@@ -240,7 +250,8 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       row.createdAt = new Date(sub.createdAt).toLocaleString();
 
       allFields.forEach((label, i) => {
-        page.drawText(String(row[label] || ""), {
+        const value = String(row[label] || "");
+        page.drawText(value, {
           x: margin + i * colWidth,
           y,
           size: fontSize,
@@ -257,12 +268,14 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
 
       y -= 20;
 
+      // Add new page if needed
       if (y < margin + 40) {
         y = height - margin - 40;
         page = pdfDoc.addPage([600, 800]);
       }
     }
 
+    // Totals
     if (numberFields.length > 0) {
       y -= 10;
       allFields.forEach((label, i) => {
@@ -293,6 +306,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     res.status(500).send("Error generating PDF");
   }
 });
+
 
 app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
   try {
