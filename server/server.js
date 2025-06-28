@@ -277,6 +277,144 @@ app.get("/api/events/:id/live-view", auth, async (req, res) => {
   }
 });
 
+// app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
+//   try {
+//     const submissions = await Submission.find({ eventId: req.params.id });
+//     const event = await Event.findById(req.params.id);
+
+//     if (!event) return res.status(404).send("Event not found");
+//     if (!submissions?.length) return res.status(404).send("No submissions found");
+
+//     const allFields = event.fields.map(f => f.label);
+//     const numberFields = event.fields
+//       .filter(f => f.type.toLowerCase() === "number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
+//       .map(f => f.label);
+
+//     const totals = {};
+//     numberFields.forEach(label => (totals[label] = 0));
+
+//     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
+//     const fontBytes = fs.readFileSync(fontPath);
+
+//     const pdfDoc = await PDFDocument.create();
+//     pdfDoc.registerFontkit(fontkit);
+//     const font = await pdfDoc.embedFont(fontBytes);
+
+//     let page = pdfDoc.addPage([900, 1200]);
+//     const { width, height } = page.getSize();
+//     const margin = 40;
+//     const fontSize = 10;
+//     const lineHeight = fontSize + 4;
+
+//     const wrapText = (text, maxWidth) => {
+//       const words = String(text || "").split(" ");
+//       const lines = [];
+//       let line = "";
+//       for (const word of words) {
+//         const testLine = line + word + " ";
+//         if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth) {
+//           lines.push(line.trim());
+//           line = word + " ";
+//         } else {
+//           line = testLine;
+//         }
+//       }
+//       if (line) lines.push(line.trim());
+//       return lines;
+//     };
+
+//     let y = height - margin;
+//     page.drawText(`Submissions for ${event.name}`, {
+//       x: margin,
+//       y: y - 10,
+//       size: 16,
+//       font,
+//       color: rgb(0, 0, 0),
+//     });
+
+//     y -= 40;
+
+//     const columns = [...allFields, "Submitted At"];
+//     const colWidth = (width - margin * 2) / columns.length;
+
+//     const drawRow = (rowValues, yStart) => {
+//       const maxLines = Math.max(...rowValues.map(val => wrapText(val, colWidth - 6).length));
+//       const rowHeight = maxLines * lineHeight + 4;
+
+//       columns.forEach((key, i) => {
+//         const x = margin + i * colWidth;
+//         const textLines = wrapText(rowValues[i], colWidth - 6);
+
+//         // Cell rectangle
+//         page.drawRectangle({
+//           x,
+//           y: yStart - rowHeight,
+//           width: colWidth,
+//           height: rowHeight,
+//           borderWidth: 0.5,
+//           borderColor: rgb(0, 0, 0),
+//         });
+
+//         // Draw wrapped text
+//         textLines.forEach((line, lineIndex) => {
+//           page.drawText(line, {
+//             x: x + 3,
+//             y: yStart - (lineIndex + 1) * lineHeight - 2,
+//             size: fontSize,
+//             font,
+//             color: rgb(0, 0, 0),
+//           });
+//         });
+//       });
+
+//       return rowHeight;
+//     };
+
+//     // Draw table header
+//     const headerHeight = drawRow(columns, y);
+//     y -= headerHeight;
+
+//     // Draw rows
+//     for (const sub of submissions) {
+//       const row = [];
+//       allFields.forEach(label => {
+//         const val = sub.data[label] ?? "";
+//         row.push(val);
+//         if (numberFields.includes(label)) {
+//           const num = Number(val);
+//           if (!isNaN(num)) totals[label] += num;
+//         }
+//       });
+//       row.push(new Date(sub.createdAt).toLocaleString());
+
+//       const rowHeight = drawRow(row, y);
+//       y -= rowHeight;
+
+//       if (y < margin + 100) {
+//         page = pdfDoc.addPage([900, 1200]);
+//         y = height - margin;
+//       }
+//     }
+
+//     // Draw total row
+//     if (numberFields.length > 0) {
+//       const totalRow = allFields.map(label => numberFields.includes(label) ? totals[label].toString() : "");
+//       totalRow.push("TOTAL");
+//       drawRow(totalRow, y);
+//     }
+
+//     const pdfBytes = await pdfDoc.save();
+//     res.setHeader("Content-Type", "application/pdf");
+//     res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.pdf"`);
+//     res.send(Buffer.from(pdfBytes));
+
+//   } catch (err) {
+//     console.error("Error generating PDF:", err);
+//     res.status(500).send("Error generating PDF");
+//   }
+// });
+
+
 app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });
@@ -293,12 +431,16 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const totals = {};
     numberFields.forEach(label => (totals[label] = 0));
 
+    // Load fonts and create document
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
     const fontBytes = fs.readFileSync(fontPath);
+    const boldFontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Bold.ttf");
+    const boldFontBytes = fs.readFileSync(boldFontPath);
 
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
-    const font = await pdfDoc.embedFont(fontBytes);
+    const regularFont = await pdfDoc.embedFont(fontBytes);
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
     let page = pdfDoc.addPage([900, 1200]);
     const { width, height } = page.getSize();
@@ -306,76 +448,71 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const fontSize = 10;
     const lineHeight = fontSize + 4;
 
-    const wrapText = (text, maxWidth) => {
-      const words = String(text || "").split(" ");
-      const lines = [];
-      let line = "";
-      for (const word of words) {
-        const testLine = line + word + " ";
-        if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth) {
-          lines.push(line.trim());
-          line = word + " ";
-        } else {
-          line = testLine;
-        }
-      }
-      if (line) lines.push(line.trim());
-      return lines;
-    };
+    // Colors
+    const primaryColor = rgb(59/255, 130/255, 246/255); // blue-500
+    const headerBgColor = rgb(229/255, 231/255, 235/255); // gray-200
+    const rowBgColor = rgb(249/255, 250/255, 251/255); // gray-50
+    const borderColor = rgb(229/255, 231/255, 235/255); // gray-200
+    const textColor = rgb(31/255, 41/255, 55/255); // gray-800
 
-    let y = height - margin;
+    // Draw header with gradient
+    page.drawRectangle({
+      x: 0,
+      y: height - 100,
+      width,
+      height: 100,
+      color: rgb(59/255, 130/255, 246/255), // blue-600
+    });
+
+    // Title
     page.drawText(`Submissions for ${event.name}`, {
       x: margin,
-      y: y - 10,
-      size: 16,
-      font,
-      color: rgb(0, 0, 0),
+      y: height - margin - 20,
+      size: 20,
+      font: boldFont,
+      color: rgb(1, 1, 1),
+    });
+
+    // Description
+    page.drawText(event.description, {
+      x: margin,
+      y: height - margin - 45,
+      size: 12,
+      font: regularFont,
+      color: rgb(1, 1, 1),
+    });
+
+    let y = height - 120;
+
+    // Table setup
+    const columns = [...allFields, "Submitted At"];
+    const colWidth = (width - margin * 2) / columns.length;
+
+    // Draw table header
+    page.drawRectangle({
+      x: margin,
+      y: y - 30,
+      width: width - margin * 2,
+      height: 30,
+      color: headerBgColor,
+      borderColor,
+      borderWidth: 1,
+    });
+
+    columns.forEach((col, i) => {
+      page.drawText(col + (numberFields.includes(col) ? ' (#)' : '', {
+        x: margin + i * colWidth + 5,
+        y: y - 25,
+        size: fontSize + 1,
+        font: boldFont,
+        color: textColor,
+      });
     });
 
     y -= 40;
 
-    const columns = [...allFields, "Submitted At"];
-    const colWidth = (width - margin * 2) / columns.length;
-
-    const drawRow = (rowValues, yStart) => {
-      const maxLines = Math.max(...rowValues.map(val => wrapText(val, colWidth - 6).length));
-      const rowHeight = maxLines * lineHeight + 4;
-
-      columns.forEach((key, i) => {
-        const x = margin + i * colWidth;
-        const textLines = wrapText(rowValues[i], colWidth - 6);
-
-        // Cell rectangle
-        page.drawRectangle({
-          x,
-          y: yStart - rowHeight,
-          width: colWidth,
-          height: rowHeight,
-          borderWidth: 0.5,
-          borderColor: rgb(0, 0, 0),
-        });
-
-        // Draw wrapped text
-        textLines.forEach((line, lineIndex) => {
-          page.drawText(line, {
-            x: x + 3,
-            y: yStart - (lineIndex + 1) * lineHeight - 2,
-            size: fontSize,
-            font,
-            color: rgb(0, 0, 0),
-          });
-        });
-      });
-
-      return rowHeight;
-    };
-
-    // Draw table header
-    const headerHeight = drawRow(columns, y);
-    y -= headerHeight;
-
-    // Draw rows
-    for (const sub of submissions) {
+    // Draw rows with alternating colors
+    for (const [index, sub] of submissions.entries()) {
       const row = [];
       allFields.forEach(label => {
         const val = sub.data[label] ?? "";
@@ -387,21 +524,78 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       });
       row.push(new Date(sub.createdAt).toLocaleString());
 
-      const rowHeight = drawRow(row, y);
-      y -= rowHeight;
+      // Alternate row colors
+      const rowColor = index % 2 === 0 ? rowBgColor : rgb(1, 1, 1);
+      
+      page.drawRectangle({
+        x: margin,
+        y: y - 20,
+        width: width - margin * 2,
+        height: 20,
+        color: rowColor,
+        borderColor,
+        borderWidth: 0.5,
+      });
 
-      if (y < margin + 100) {
+      // Draw cell values
+      row.forEach((value, i) => {
+        page.drawText(String(value), {
+          x: margin + i * colWidth + 5,
+          y: y - 15,
+          size: fontSize,
+          font: regularFont,
+          color: textColor,
+        });
+      });
+
+      y -= 25;
+
+      // Add new page if running out of space
+      if (y < margin + 50) {
         page = pdfDoc.addPage([900, 1200]);
         y = height - margin;
       }
     }
 
-    // Draw total row
+    // Draw totals row
     if (numberFields.length > 0) {
-      const totalRow = allFields.map(label => numberFields.includes(label) ? totals[label].toString() : "");
+      const totalRow = allFields.map(label => 
+        numberFields.includes(label) ? totals[label].toString() : ""
+      );
       totalRow.push("TOTAL");
-      drawRow(totalRow, y);
+
+      page.drawRectangle({
+        x: margin,
+        y: y - 20,
+        width: width - margin * 2,
+        height: 20,
+        color: headerBgColor,
+        borderColor,
+        borderWidth: 0.5,
+      });
+
+      totalRow.forEach((value, i) => {
+        page.drawText(value, {
+          x: margin + i * colWidth + 5,
+          y: y - 15,
+          size: fontSize,
+          font: boldFont,
+          color: textColor,
+        });
+      });
     }
+
+    // Add footer with timestamp
+    page.drawText(
+      `Generated on ${new Date().toLocaleString()} | Total submissions: ${submissions.length}`,
+      {
+        x: margin,
+        y: margin - 10,
+        size: 8,
+        font: regularFont,
+        color: rgb(0.5, 0.5, 0.5),
+      }
+    );
 
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
@@ -413,7 +607,6 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     res.status(500).send("Error generating PDF");
   }
 });
-
 
 
 
