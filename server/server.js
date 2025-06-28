@@ -414,7 +414,6 @@ app.get("/api/events/:id/live-view", auth, async (req, res) => {
 //   }
 // });
 
-
 app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });
@@ -431,10 +430,10 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const totals = {};
     numberFields.forEach(label => (totals[label] = 0));
 
-    // Load fonts and create document
+    // Load fonts
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
-    const fontBytes = fs.readFileSync(fontPath);
     const boldFontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Bold.ttf");
+    const fontBytes = fs.readFileSync(fontPath);
     const boldFontBytes = fs.readFileSync(boldFontPath);
 
     const pdfDoc = await PDFDocument.create();
@@ -448,23 +447,21 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const fontSize = 10;
     const lineHeight = fontSize + 4;
 
-    // Colors
     const primaryColor = rgb(59/255, 130/255, 246/255); // blue-500
     const headerBgColor = rgb(229/255, 231/255, 235/255); // gray-200
     const rowBgColor = rgb(249/255, 250/255, 251/255); // gray-50
     const borderColor = rgb(229/255, 231/255, 235/255); // gray-200
     const textColor = rgb(31/255, 41/255, 55/255); // gray-800
 
-    // Draw header with gradient
+    // Header Banner
     page.drawRectangle({
       x: 0,
       y: height - 100,
       width,
       height: 100,
-      color: rgb(59/255, 130/255, 246/255), // blue-600
+      color: primaryColor,
     });
 
-    // Title
     page.drawText(`Submissions for ${event.name}`, {
       x: margin,
       y: height - margin - 20,
@@ -473,8 +470,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       color: rgb(1, 1, 1),
     });
 
-    // Description
-    page.drawText(event.description, {
+    page.drawText(event.description || "", {
       x: margin,
       y: height - margin - 45,
       size: 12,
@@ -483,109 +479,72 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     });
 
     let y = height - 120;
-
-    // Table setup
     const columns = [...allFields, "Submitted At"];
     const colWidth = (width - margin * 2) / columns.length;
 
-    // Draw table header
-    page.drawRectangle({
-      x: margin,
-      y: y - 30,
-      width: width - margin * 2,
-      height: 30,
-      color: headerBgColor,
-      borderColor,
-      borderWidth: 1,
-    });
+    const drawRow = (rowValues, isHeader = false, bgColor = null) => {
+      const rowHeight = 20;
 
-    columns.forEach((col, i) => {
-      page.drawText(col + (numberFields.includes(col) ? ' (#)' : '', {
-        x: margin + i * colWidth + 5,
-        y: y - 25,
-        size: fontSize + 1,
-        font: boldFont,
-        color: textColor,
-      });
-    });
+      // Background rectangle
+      if (bgColor) {
+        page.drawRectangle({
+          x: margin,
+          y: y - rowHeight,
+          width: width - margin * 2,
+          height: rowHeight,
+          color: bgColor,
+          borderColor,
+          borderWidth: 0.5,
+        });
+      }
 
-    y -= 40;
-
-    // Draw rows with alternating colors
-    for (const [index, sub] of submissions.entries()) {
-      const row = [];
-      allFields.forEach(label => {
-        const val = sub.data[label] ?? "";
-        row.push(val);
-        if (numberFields.includes(label)) {
-          const num = Number(val);
-          if (!isNaN(num)) totals[label] += num;
-        }
-      });
-      row.push(new Date(sub.createdAt).toLocaleString());
-
-      // Alternate row colors
-      const rowColor = index % 2 === 0 ? rowBgColor : rgb(1, 1, 1);
-      
-      page.drawRectangle({
-        x: margin,
-        y: y - 20,
-        width: width - margin * 2,
-        height: 20,
-        color: rowColor,
-        borderColor,
-        borderWidth: 0.5,
-      });
-
-      // Draw cell values
-      row.forEach((value, i) => {
+      rowValues.forEach((value, i) => {
         page.drawText(String(value), {
           x: margin + i * colWidth + 5,
           y: y - 15,
           size: fontSize,
-          font: regularFont,
+          font: isHeader ? boldFont : regularFont,
           color: textColor,
         });
       });
 
-      y -= 25;
+      y -= rowHeight;
 
-      // Add new page if running out of space
       if (y < margin + 50) {
         page = pdfDoc.addPage([900, 1200]);
         y = height - margin;
       }
-    }
+    };
 
-    // Draw totals row
+    // Table Header
+    const headerRow = columns.map(col => numberFields.includes(col) ? `${col} (#)` : col);
+    drawRow(headerRow, true, headerBgColor);
+
+    // Submissions Rows
+    submissions.forEach((sub, index) => {
+      const row = allFields.map(label => {
+        const val = sub.data[label] ?? "";
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+        return val;
+      });
+      row.push(new Date(sub.createdAt).toLocaleString());
+
+      drawRow(row, false, index % 2 === 0 ? rowBgColor : null);
+    });
+
+    // Totals Row
     if (numberFields.length > 0) {
-      const totalRow = allFields.map(label => 
+      const totalRow = allFields.map(label =>
         numberFields.includes(label) ? totals[label].toString() : ""
       );
       totalRow.push("TOTAL");
-
-      page.drawRectangle({
-        x: margin,
-        y: y - 20,
-        width: width - margin * 2,
-        height: 20,
-        color: headerBgColor,
-        borderColor,
-        borderWidth: 0.5,
-      });
-
-      totalRow.forEach((value, i) => {
-        page.drawText(value, {
-          x: margin + i * colWidth + 5,
-          y: y - 15,
-          size: fontSize,
-          font: boldFont,
-          color: textColor,
-        });
-      });
+      drawRow(totalRow, true, headerBgColor);
     }
 
-    // Add footer with timestamp
+    // Footer
     page.drawText(
       `Generated on ${new Date().toLocaleString()} | Total submissions: ${submissions.length}`,
       {
@@ -601,16 +560,11 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.pdf"`);
     res.send(Buffer.from(pdfBytes));
-
   } catch (err) {
     console.error("Error generating PDF:", err);
     res.status(500).send("Error generating PDF");
   }
 });
-
-
-
-
 
 // Cron job: Delete expired events + submissions after 2 days
 cron.schedule("0 0 * * *", async () => {
