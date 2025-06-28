@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
     const [events, setEvents] = useState([]);
@@ -282,14 +283,14 @@ export default function Dashboard() {
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                <a
-                                    href={`/form/${ev._id}`}
+                                <Link
+                                    to={`/form/${ev._id}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:text-blue-800 underline"
                                 >
                                     🔗 Open Form
-                                </a>
+                                </Link>
                                 <button
                                     onClick={() => fetchLiveView(ev._id)}
                                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-1 rounded-lg"
