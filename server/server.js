@@ -96,6 +96,19 @@ app.get("/api/events/:id", async (req, res) => {
   res.json(event);
 });
 
+// DELETE specific submission
+app.delete("/api/events/:eventId/submissions/:submissionId", auth, async (req, res) => {
+  const { eventId, submissionId } = req.params;
+
+  const submission = await Submission.findOneAndDelete({ _id: submissionId, eventId });
+  if (!submission) {
+    return res.status(404).json({ message: "Submission not found" });
+  }
+
+  res.json({ message: "Submission deleted successfully" });
+});
+
+
 // Submit form
 app.post("/api/events/:id/submit", async (req, res) => {
   const event = await Event.findById(req.params.id);
