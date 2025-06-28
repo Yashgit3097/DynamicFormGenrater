@@ -10,11 +10,12 @@ export default function UserForm() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState({});
     const [error, setError] = useState(null);
+    const baseURL = "http://localhost:4000"
 
     useEffect(() => {
         const fetchEvent = async () => {
             try {
-                const res = await axios.get(`http://localhost:4000/api/events/${eventId}`);
+                const res = await axios.get(`${baseURL}/api/events/${eventId}`);
                 setEvent(res.data);
                 setError(null);
             } catch (err) {
@@ -52,7 +53,7 @@ export default function UserForm() {
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
-            await axios.post(`http://localhost:4000/api/events/${eventId}/submit`, values);
+            await axios.post(`${baseURL}/api/events/${eventId}/submit`, values);
             setIsSubmitted(true);
             setError(null);
         } catch (err) {

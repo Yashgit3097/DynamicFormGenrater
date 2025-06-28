@@ -4,10 +4,11 @@ import axios from "axios";
 export default function Login() {
     const [email, setEmail] = useState("admin@admin.com");
     const [password, setPassword] = useState("admin@1234");
+    const baseURL = "http://localhost:4000"
 
     const handleLogin = async () => {
         try {
-            const res = await axios.post("http://localhost:4000/api/login", {
+            const res = await axios.post(`${baseURL}/api/login`, {
                 email, password
             });
             localStorage.setItem("token", res.data.token);
