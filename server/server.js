@@ -125,20 +125,39 @@ app.delete("/api/submissions", auth, async (req, res) => {
 
 
 
-// Submit form
 app.post("/api/events/:id/submit", async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) return res.status(404).send("Event not found");
+
   if (new Date() > new Date(event.expiresAt)) {
     return res.status(410).send("Link expired");
   }
+
+  const userIp =
+    req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
+
+  // Count how many times this IP has submitted for this event
+  const submissionCount = await Submission.countDocuments({
+    eventId: event._id,
+    ip: userIp,
+  });
+
+  if (submissionCount >= 2) {
+    return res.status(429).json({
+      message: "You have already submitted this form twice from your IP address.",
+    });
+  }
+
   const submission = new Submission({
     eventId: event._id,
     data: req.body,
+    ip: userIp,
   });
+
   await submission.save();
   res.json(submission);
 });
+
 app.get("/api/events/:id/download", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });

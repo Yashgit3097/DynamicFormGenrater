@@ -10,7 +10,8 @@ export default function UserForm() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState({});
     const [error, setError] = useState(null);
-    const baseURL = "https://dynamicformgenrater.onrender.com"
+
+    const baseURL = "https://dynamicformgenrater.onrender.com";
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -74,12 +75,6 @@ export default function UserForm() {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
                     <p className="text-gray-600 mb-6">{error}</p>
-                    <a
-                        href="/"
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                    >
-                        Return Home
-                    </a>
                 </div>
             </div>
         );
@@ -182,26 +177,10 @@ export default function UserForm() {
                                 >
                                     Submit Another
                                 </button>
-
                             </div>
                         </div>
                     )}
                 </div>
-
-                {/* Form Footer
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
-                    <p className="text-sm text-gray-500">
-                        {timeLeft.expired ? (
-                            <span className="text-red-500">This form has closed</span>
-                        ) : (
-                            <>
-                                Form closes in{' '}
-                                {timeLeft.days > 0 && `${timeLeft.days}d `}
-                                {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s
-                            </>
-                        )}
-                    </p>
-                </div> */}
             </div>
         </div>
     );

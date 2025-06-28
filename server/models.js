@@ -16,6 +16,7 @@ const eventSchema = new mongoose.Schema({
 const submissionSchema = new mongoose.Schema({
   eventId: mongoose.Schema.Types.ObjectId,
   data: Object,
+   ip: { type: String, required: true }, // Add this line
   createdAt: { type: Date, default: Date.now },
 });
 
