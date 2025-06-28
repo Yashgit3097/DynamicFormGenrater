@@ -11,7 +11,7 @@ export default function Dashboard() {
     const [liveViewData, setLiveViewData] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const baseURL = "http://localhost:4000"
+    const baseURL = "https://dynamicformgenrater.onrender.com"
 
     const token = localStorage.getItem("token");
 
