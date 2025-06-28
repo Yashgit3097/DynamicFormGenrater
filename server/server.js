@@ -139,6 +139,77 @@ app.post("/api/events/:id/submit", async (req, res) => {
   await submission.save();
   res.json(submission);
 });
+app.get("/api/events/:id/download", auth, async (req, res) => {
+  try {
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).send("Event not found");
+    if (!submissions?.length) return res.status(404).send("No submissions found");
+
+    // Get all field labels and detect number fields (even if not properly typed)
+    const allFields = event.fields.map(f => f.label);
+    const numberFields = event.fields
+      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
+      .map(f => f.label);
+
+    console.log("Auto-detected number fields:", numberFields); // This should now include 'sankhya'
+
+    // CSV Headers
+    const headers = [
+      ...allFields.map(label => ({ id: label, title: label })),
+      { id: "createdAt", title: "Submitted At" },
+    ];
+
+    // Initialize totals
+    const totals = {};
+    numberFields.forEach(label => (totals[label] = 0));
+
+    // Process submissions
+    const records = submissions.map(sub => {
+      const record = {};
+      allFields.forEach(label => {
+        const val = sub.data[label];
+        record[label] = val ?? "";
+
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+      });
+      record.createdAt = new Date(sub.createdAt).toLocaleString();
+      return record;
+    });
+
+    // Add total row if we found any number fields
+    if (numberFields.length > 0) {
+      const totalRow = Object.fromEntries(
+        allFields.map(label => [
+          label, 
+          numberFields.includes(label) ? totals[label] : ""
+        ])
+      );
+      totalRow.createdAt = "TOTAL";
+      records.push(totalRow);
+    }
+
+    // Generate CSV
+    const csvWriter = createObjectCsvWriter({
+      path: "submissions.csv",
+      header: headers,
+    });
+    await csvWriter.writeRecords(records);
+
+    res.download("submissions.csv", `submissions_${event._id}.csv`, (err) => {
+      fs.unlink("submissions.csv", () => {});
+      if (err) console.error("Download failed:", err);
+    });
+
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).send("Server error");
+  }
+});
 
 // Get submissions for an event
 app.get("/api/events/:id/submissions", auth, async (req, res) => {
