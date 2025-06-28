@@ -14,6 +14,7 @@ export default function Dashboard() {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
     const [error, setError] = useState("");
     const baseURL = "https://dynamicformgenrater.onrender.com";
     const navigate = useNavigate();
@@ -401,6 +402,8 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* ✅ Action Buttons */}
                                     <div className="flex flex-wrap gap-2 mt-4">
                                         <Link
                                             to={`/form/${ev._id}`}
@@ -410,6 +413,41 @@ export default function Dashboard() {
                                         >
                                             🔗 Open Form
                                         </Link>
+
+                                        <motion.button
+                                            onClick={() => {
+                                                const link = `${window.location.origin}/form/${ev._id}`;
+                                                navigator.clipboard.writeText(link)
+                                                    .then(() => {
+                                                        setIsCopied(true);
+                                                        setTimeout(() => setIsCopied(false), 2000);
+                                                    })
+                                                    .catch((err) => {
+                                                        alert("Failed to copy link.");
+                                                    });
+                                            }}
+                                            className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
+                                                }`}
+                                            whileTap={{ scale: 0.95 }}
+                                            animate={{
+                                                backgroundColor: isCopied ? "#22c55e" : "#3b82f6"
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <motion.span
+                                                animate={{
+                                                    scale: isCopied ? [1, 1.2, 1] : 1,
+                                                    rotate: isCopied ? [0, 10, -10, 0] : 0
+                                                }}
+                                                transition={{ duration: 0.5 }}
+                                            >
+                                                {isCopied ? '✓' : '📋'}
+                                            </motion.span>
+                                            <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
+                                        </motion.button>
+
+
+
                                         <button
                                             onClick={() => fetchLiveView(ev._id)}
                                             className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200"
@@ -440,6 +478,7 @@ export default function Dashboard() {
                         </div>
                     )}
                 </motion.div>
+
 
                 {/* Live View Modal */}
                 <AnimatePresence>
