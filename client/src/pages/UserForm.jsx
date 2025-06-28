@@ -188,7 +188,7 @@ export default function UserForm() {
                     )}
                 </div>
 
-                {/* Form Footer */}
+                {/* Form Footer
                 <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
                     <p className="text-sm text-gray-500">
                         {timeLeft.expired ? (
@@ -201,7 +201,7 @@ export default function UserForm() {
                             </>
                         )}
                     </p>
-                </div>
+                </div> */}
             </div>
         </div>
     );
