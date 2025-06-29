@@ -100,14 +100,18 @@ app.get("/api/events/:id", async (req, res) => {
 app.delete("/api/submissions", auth, async (req, res) => {
   try {
     const { submissionIds } = req.body;
-    
+
     if (!submissionIds || !Array.isArray(submissionIds)) {
       return res.status(400).send("Invalid submission IDs");
     }
 
-    const result = await Submission.deleteMany({ 
-      _id: { $in: submissionIds } 
-    });
+    const validIds = submissionIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+
+    if (validIds.length === 0) {
+      return res.status(400).send("No valid submission IDs provided");
+    }
+
+    const result = await Submission.deleteMany({ _id: { $in: validIds } });
 
     if (result.deletedCount === 0) {
       return res.status(404).send("No submissions found to delete");
