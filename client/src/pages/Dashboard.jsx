@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    Copy,
+    Check,
+    Eye,
+    FileText,
+    FileDown,
+    Trash2,
+    Link2
+} from "lucide-react";
+
 
 export default function Dashboard() {
     const [events, setEvents] = useState([]);
@@ -49,10 +59,17 @@ export default function Dashboard() {
                 if (diff <= 0) {
                     newCountdowns[event._id] = 'Expired';
                 } else {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
                     const minutes = Math.floor((diff / 1000 / 60) % 60);
                     const seconds = Math.floor((diff / 1000) % 60);
-                    newCountdowns[event._id] = `${hours}h ${minutes}m ${seconds}s`;
+
+                    let countdownStr = '';
+                    if (days > 0) countdownStr += `${days}d `;
+                    if (hours > 0 || days > 0) countdownStr += `${hours}h `;
+                    countdownStr += `${minutes}m ${seconds}s`;
+
+                    newCountdowns[event._id] = countdownStr.trim();
                 }
             });
             setCountdowns(newCountdowns);
@@ -60,6 +77,7 @@ export default function Dashboard() {
 
         return () => clearInterval(timer);
     }, [events]);
+
 
     const createEvent = async () => {
         if (!name || !expiresAt) {
@@ -403,15 +421,15 @@ export default function Dashboard() {
                                         </div>
                                     </div>
 
-                                    {/* ✅ Action Buttons */}
                                     <div className="flex flex-wrap gap-2 mt-4">
                                         <Link
                                             to={`/form/${ev._id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 underline flex items-center text-sm cursor-pointer"
+                                            className="text-blue-600 hover:text-blue-800 underline flex items-center jus text-sm cursor-pointer gap-1"
                                         >
-                                            🔗 Open Form
+                                            <Link2 size={16} />
+                                            Open Form
                                         </Link>
 
                                         <motion.button
@@ -422,57 +440,51 @@ export default function Dashboard() {
                                                         setIsCopied(true);
                                                         setTimeout(() => setIsCopied(false), 2000);
                                                     })
-                                                    .catch((err) => {
-                                                        alert("Failed to copy link.");
-                                                    });
+                                                    .catch(() => alert("Failed to copy link."));
                                             }}
                                             className={`flex items-center gap-1 px-3 py-1 rounded-lg cursor-pointer text-sm text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                                                 }`}
                                             whileTap={{ scale: 0.95 }}
-                                            animate={{
-                                                backgroundColor: isCopied ? "#22c55e" : "#3b82f6"
-                                            }}
+                                            animate={{ backgroundColor: isCopied ? "#22c55e" : "#3b82f6" }}
                                             transition={{ duration: 0.2 }}
                                         >
-                                            <motion.span
-                                                animate={{
-                                                    scale: isCopied ? [1, 1.2, 1] : 1,
-                                                    rotate: isCopied ? [0, 10, -10, 0] : 0
-                                                }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                {isCopied ? '✓' : '📋'}
-                                            </motion.span>
+                                            {isCopied ? <Check size={16} /> : <Copy size={16} />}
                                             <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
                                         </motion.button>
 
-
-
                                         <button
                                             onClick={() => fetchLiveView(ev._id)}
-                                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
+                                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
                                         >
-                                            👁️ Live View
+                                            <Eye size={16} />
+                                            <span>Live View</span>
                                         </button>
+
                                         <button
                                             onClick={() => downloadCSV(ev._id)}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
                                         >
-                                            📊 CSV
+                                            <FileText size={16} />
+                                            <span>Export CSV</span>
                                         </button>
+
                                         <button
                                             onClick={() => downloadPDF(ev._id)}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
+                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
                                         >
-                                            📄 PDF
+                                            <FileDown size={16} />
+                                            <span>Download PDF</span>
                                         </button>
+
                                         <button
                                             onClick={() => deleteEvent(ev._id)}
-                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer"
+                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
                                         >
-                                            🗑️ Delete
+                                            <Trash2 size={16} />
+                                            <span>Delete</span>
                                         </button>
                                     </div>
+
                                 </motion.div>
                             ))}
                         </div>

@@ -26,31 +26,6 @@ export default function UserForm() {
         fetchEvent();
     }, [eventId]);
 
-    // Countdown timer effect
-    useEffect(() => {
-        if (!event) return;
-
-        const calculateTimeLeft = () => {
-            const difference = new Date(event.expiresAt) - new Date();
-            if (difference <= 0) return { expired: true };
-
-            return {
-                days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-                hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                minutes: Math.floor((difference / 1000 / 60) % 60),
-                seconds: Math.floor((difference / 1000) % 60),
-                expired: false
-            };
-        };
-
-        setTimeLeft(calculateTimeLeft());
-        const timer = setInterval(() => {
-            setTimeLeft(calculateTimeLeft());
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [event]);
-
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
@@ -109,7 +84,7 @@ export default function UserForm() {
                         <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
                             {event.fields.map((f, i) => (
                                 <div key={i} className="mb-5">
-                                    <label className="block mb-2 font-medium text-gray-700">
+                                    <label className="block mb-2 font-bold text-gray-700">
                                         {f.label}
                                         {f.type === 'number' && <span className="text-gray-500 ml-1">(numeric)</span>}
                                         {f.type === 'email' && <span className="text-gray-500 ml-1">(email)</span>}
