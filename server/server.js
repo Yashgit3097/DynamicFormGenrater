@@ -156,6 +156,7 @@ app.post("/api/events/:id/submit", async (req, res) => {
     eventId: event._id,
     data: req.body,
     ip: userIp,
+     createdAt: new Date(), // ✅ Add this explicitly
   });
 
   await submission.save();
