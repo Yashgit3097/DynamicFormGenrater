@@ -3,8 +3,10 @@ import mongoose from "mongoose";
 
 const fieldSchema = new mongoose.Schema({
   label: String,
-  type: String,
+  type: String, // text, number, email, date, dropdown
+  options: [String], // Only used for dropdown
 });
+
 
 const eventSchema = new mongoose.Schema({
   name: String,
