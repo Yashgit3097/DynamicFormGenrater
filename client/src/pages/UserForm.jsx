@@ -8,8 +8,8 @@ export default function UserForm() {
     const [values, setValues] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [timeLeft, setTimeLeft] = useState({});
     const [error, setError] = useState(null);
+    const [isExpired, setIsExpired] = useState(false);
 
     const baseURL = "https://dynamicformgenrater.onrender.com";
 
@@ -17,12 +17,20 @@ export default function UserForm() {
         const fetchEvent = async () => {
             try {
                 const res = await axios.get(`${baseURL}/api/events/${eventId}`);
-                setEvent(res.data);
+                const eventData = res.data;
+
+                // Check if the event has expired
+                if (new Date(eventData.expiresAt) < new Date()) {
+                    setIsExpired(true);
+                }
+
+                setEvent(eventData);
                 setError(null);
             } catch (err) {
                 setError("Link expired or not found");
             }
         };
+
         fetchEvent();
     }, [eventId]);
 
@@ -41,7 +49,7 @@ export default function UserForm() {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 p-4">
+            <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
                 <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
                         <svg className="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,7 +65,7 @@ export default function UserForm() {
 
     if (!event) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 p-4">
+            <div className="min-h-screen flex items-center justify-center bg-blue-50 p-4">
                 <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
                     <div className="animate-pulse flex justify-center mb-4">
                         <div className="h-12 w-12 bg-blue-200 rounded-full"></div>
@@ -81,41 +89,55 @@ export default function UserForm() {
                 {/* Form Body */}
                 <div className="p-6 md:p-8">
                     {!isSubmitted ? (
-                        <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+                        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
                             {event.fields.map((f, i) => (
                                 <div key={i} className="mb-5">
                                     <label className="block mb-2 font-bold text-gray-700">
                                         {f.label}
-                                        {f.type === 'number' && <span className="text-gray-500 ml-1">(numeric)</span>}
-                                        {f.type === 'email' && <span className="text-gray-500 ml-1">(email)</span>}
+                                        {f.type === "number" && <span className="text-gray-500 ml-1">(numeric)</span>}
+                                        {f.type === "email" && <span className="text-gray-500 ml-1">(email)</span>}
                                     </label>
-                                    <input
-                                        type={f.type}
-                                        value={values[f.label] || ""}
-                                        onChange={e => setValues({ ...values, [f.label]: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
-                                        placeholder={`Enter ${f.label.toLowerCase()}`}
-                                        required
-                                        {...(f.type === 'number' ? { step: "any" } : {})}
-                                        {...(f.type === 'date' ? { min: new Date().toISOString().split('T')[0] } : {})}
-                                    />
+
+                                    {/* Input type handling */}
+                                    {f.type === "dropdown" ? (
+                                        <select
+                                            value={values[f.label] || ""}
+                                            onChange={e => setValues({ ...values, [f.label]: e.target.value })}
+                                            required
+                                            className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                                        >
+                                            <option value="">Select an option</option>
+                                            {(f.options || []).map((opt, idx) => (
+                                                <option key={idx} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={f.type}
+                                            value={values[f.label] || ""}
+                                            onChange={e => setValues({ ...values, [f.label]: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                                            placeholder={`Enter ${f.label.toLowerCase()}`}
+                                            required
+                                            {...(f.type === "number" ? { step: "any" } : {})}
+                                            {...(f.type === "date" ? { min: new Date().toISOString().split("T")[0] } : {})}
+                                        />
+                                    )}
                                 </div>
                             ))}
 
                             {error && (
-                                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-                                    {error}
-                                </div>
+                                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>
                             )}
 
                             <button
                                 type="submit"
-                                disabled={isSubmitting || timeLeft.expired}
+                                disabled={isSubmitting || isExpired}
                                 className={`w-full py-3 px-4 rounded-lg font-semibold text-white shadow-md transition-all duration-300 flex items-center justify-center ${isSubmitting
-                                    ? 'bg-blue-400 cursor-not-allowed'
-                                    : timeLeft.expired
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+                                        ? "bg-blue-400 cursor-not-allowed"
+                                        : isExpired
+                                            ? "bg-gray-400 cursor-not-allowed"
+                                            : "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
                                     }`}
                             >
                                 {isSubmitting ? (
@@ -126,10 +148,10 @@ export default function UserForm() {
                                         </svg>
                                         Processing...
                                     </>
-                                ) : timeLeft.expired ? (
-                                    'Form Closed'
+                                ) : isExpired ? (
+                                    "Form Closed"
                                 ) : (
-                                    'Submit Form'
+                                    "Submit Form"
                                 )}
                             </button>
                         </form>
@@ -142,17 +164,15 @@ export default function UserForm() {
                             </div>
                             <h3 className="text-2xl font-bold text-gray-800 mb-2">Successfully Submitted!</h3>
                             <p className="text-gray-600 mb-6">Thank you for your submission. We've received your information.</p>
-                            <div className="flex gap-3 justify-center">
-                                <button
-                                    onClick={() => {
-                                        setValues({});
-                                        setIsSubmitted(false);
-                                    }}
-                                    className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-200 transition-colors"
-                                >
-                                    Submit Another
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => {
+                                    setValues({});
+                                    setIsSubmitted(false);
+                                }}
+                                className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-200 transition-colors"
+                            >
+                                Submit Another
+                            </button>
                         </div>
                     )}
                 </div>

@@ -25,6 +25,7 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+    const [noData, setNodata] = useState(true)
     const [error, setError] = useState("");
     const baseURL = "https://dynamicformgenrater.onrender.com";
     const navigate = useNavigate();
@@ -78,6 +79,20 @@ export default function Dashboard() {
         return () => clearInterval(timer);
     }, [events]);
 
+    function formatToIST(dateString) {
+        const utcDate = new Date(dateString);
+        const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+        const istDate = new Date(utcDate.getTime() + istOffset);
+
+        return istDate.toLocaleString('en-IN', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+        });
+    }
 
     const createEvent = async () => {
         if (!name || !expiresAt) {
@@ -143,7 +158,7 @@ export default function Dashboard() {
             link.click();
             link.remove();
         } catch (err) {
-            alert("Failed to download CSV");
+            alert("There is no data available so you not download right now let user input that data....");
         }
     };
 
@@ -164,7 +179,7 @@ export default function Dashboard() {
             link.click();
             link.remove();
         } catch (err) {
-            alert("Failed to download PDF");
+            alert("There is no data available so you not download right now let user input that data....");
         }
     };
 
@@ -175,11 +190,12 @@ export default function Dashboard() {
                 `${baseURL}/api/events/${eventId}/live-view`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+            setNodata(false);
             setLiveViewData(res.data);
             setSelectedEvent(eventId);
         } catch (err) {
             console.error("Error fetching live view:", err);
-            alert("Failed to load live view");
+            alert("There is no date filled up wait.... please wait for let user submit the form")
         } finally {
             setIsLoading(false);
         }
@@ -214,6 +230,8 @@ export default function Dashboard() {
         navigate("/");
     };
 
+
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -246,9 +264,7 @@ export default function Dashboard() {
                     transition={{ delay: 0.1 }}
                     className="bg-white shadow-xl rounded-2xl p-6 mb-8 backdrop-blur-sm bg-opacity-90"
                 >
-                    <h2 className="text-2xl font-semibold mb-4 text-gray-700">
-                        Create New Event
-                    </h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-700">Create New Event</h2>
 
                     {error && (
                         <motion.div
@@ -306,7 +322,7 @@ export default function Dashboard() {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2"
+                                className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2"
                             >
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Field Label</label>
@@ -328,8 +344,28 @@ export default function Dashboard() {
                                         <option value="number">Number</option>
                                         <option value="email">Email</option>
                                         <option value="date">Date</option>
+                                        <option value="dropdown">Dropdown</option>
                                     </select>
                                 </div>
+                                {f.type === "dropdown" && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Options (comma-separated)
+                                        </label>
+                                        <input
+                                            value={f.options?.join(",") || ""}
+                                            onChange={(e) =>
+                                                handleFieldChange(
+                                                    i,
+                                                    "options",
+                                                    e.target.value.split(",").map((opt) => opt.trim())
+                                                )
+                                            }
+                                            placeholder="e.g. Option 1, Option 2, Option 3"
+                                            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        />
+                                    </div>
+                                )}
                                 <div className="flex items-end">
                                     <button
                                         type="button"
@@ -347,18 +383,35 @@ export default function Dashboard() {
                         <button
                             onClick={createEvent}
                             disabled={isCreating}
-                            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-200 flex cursor-pointer items-center ${isCreating ? 'opacity-75' : ''}`}
+                            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-200 flex cursor-pointer items-center ${isCreating ? "opacity-75" : ""
+                                }`}
                         >
                             {isCreating ? (
                                 <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <svg
+                                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
                                     </svg>
                                     Creating...
                                 </>
                             ) : (
-                                '✅ Create Event'
+                                "✅ Create Event"
                             )}
                         </button>
                     </div>
@@ -573,7 +626,7 @@ export default function Dashboard() {
                                                         </td>
                                                     ))}
                                                     <td className="py-3 px-4 border-b border-gray-200 text-sm">
-                                                        {new Date(row.createdAt).toLocaleString()}
+                                                        {formatToIST(row.createdAt)}
                                                     </td>
                                                 </motion.tr>
                                             ))}
@@ -605,6 +658,8 @@ export default function Dashboard() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+
             </div>
         </motion.div>
     );
