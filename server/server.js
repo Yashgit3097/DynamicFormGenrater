@@ -595,9 +595,8 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
 cron.schedule("0 0 * * *", async () => {
   console.log("⏰ Running daily cleanup");
   const now = new Date();
-  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 
-  const expired = await Event.find({ expiresAt: { $lte: twoDaysAgo } });
+  const expired = await Event.find({ expiresAt: { $lte: now } });
   for (const e of expired) {
     await Submission.deleteMany({ eventId: e._id });
     await Event.findByIdAndDelete(e._id);
