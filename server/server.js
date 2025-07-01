@@ -7,7 +7,6 @@ import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import moment from "moment-timezone";
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -595,8 +594,9 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
 
 // Cron job: Delete expired events + submissions after 2 days
 cron.schedule("0 0 * * *", async () => {
-  const now = moment().tz("Asia/Kolkata");
-  const twoDaysAgo = now.clone().subtract(2, "days").toDate();
+  console.log("⏰ Running daily cleanup");
+  const now = new Date();
+  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 
   const expired = await Event.find({ expiresAt: { $lte: twoDaysAgo } });
   for (const e of expired) {
