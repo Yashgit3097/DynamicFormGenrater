@@ -111,6 +111,23 @@ export default function UserForm() {
                                                 <option key={idx} value={opt}>{opt}</option>
                                             ))}
                                         </select>
+                                    ) : f.type === "radio" ? (
+                                        <div className="space-y-2">
+                                            {(f.options || []).map((opt, idx) => (
+                                                <label key={idx} className="flex items-center space-x-2">
+                                                    <input
+                                                        type="radio"
+                                                        name={f.label}
+                                                        value={opt}
+                                                        checked={values[f.label] === opt}
+                                                        onChange={(e) => setValues({ ...values, [f.label]: e.target.value })}
+                                                        required
+                                                        className="text-blue-500 focus:ring-blue-400"
+                                                    />
+                                                    <span className="text-gray-700">{opt}</span>
+                                                </label>
+                                            ))}
+                                        </div>
                                     ) : (
                                         <input
                                             type={f.type}
@@ -178,5 +195,6 @@ export default function UserForm() {
                 </div>
             </div>
         </div>
+
     );
 }

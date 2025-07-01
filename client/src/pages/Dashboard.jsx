@@ -345,9 +345,11 @@ export default function Dashboard() {
                                         <option value="email">Email</option>
                                         <option value="date">Date</option>
                                         <option value="dropdown">Dropdown</option>
+                                        <option value="radio">Radio</option> {/* ✅ New */}
                                     </select>
                                 </div>
-                                {f.type === "dropdown" && (
+
+                                {(f.type === "dropdown" || f.type === "radio") && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Options (comma-separated)
@@ -361,11 +363,15 @@ export default function Dashboard() {
                                                     e.target.value.split(",").map((opt) => opt.trim())
                                                 )
                                             }
-                                            placeholder="e.g. Option 1, Option 2, Option 3"
+                                            placeholder="e.g. Yes, No"
                                             className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                         />
+                                        <small className="text-xs text-gray-500">
+                                            For {f.type} fields: separate values with commas
+                                        </small>
                                     </div>
                                 )}
+
                                 <div className="flex items-end">
                                     <button
                                         type="button"
@@ -416,6 +422,7 @@ export default function Dashboard() {
                         </button>
                     </div>
                 </motion.div>
+
 
                 {/* Events List */}
                 <motion.div
