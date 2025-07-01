@@ -56,7 +56,13 @@ export default function Dashboard() {
         const timer = setInterval(() => {
             const newCountdowns = {};
             events.forEach(event => {
-                const diff = new Date(event.expiresAt) - new Date();
+                // Convert both dates to IST
+                const now = new Date();
+                const nowIST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+                const expiryIST = new Date(new Date(event.expiresAt).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+
+                const diff = expiryIST - nowIST;
+
                 if (diff <= 0) {
                     newCountdowns[event._id] = 'Expired';
                 } else {
@@ -78,6 +84,7 @@ export default function Dashboard() {
 
         return () => clearInterval(timer);
     }, [events]);
+
 
     function formatToIST(dateString) {
         const utcDate = new Date(dateString);

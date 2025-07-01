@@ -19,6 +19,7 @@
     "express": "^5.1.0",
     "fontkit": "^2.0.4",
     "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.6.0",
     "mongoose": "^8.16.1",
     "node-cron": "^4.1.1",
     "pdf-lib": "^1.17.1"
