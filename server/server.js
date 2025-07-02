@@ -7,6 +7,7 @@ import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import ExcelJs from "exceljs"
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -171,67 +172,79 @@ app.get("/api/events/:id/download", auth, async (req, res) => {
     if (!event) return res.status(404).send("Event not found");
     if (!submissions?.length) return res.status(404).send("No submissions found");
 
-    // Get all field labels and detect number fields (even if not properly typed)
-    const allFields = event.fields.map(f => f.label);
+    const allFields = event.fields.map((f) => f.label);
     const numberFields = event.fields
-      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
-      .map(f => f.label);
+      .filter((f) => f.type?.toLowerCase() === "number")
+      .map((f) => f.label);
 
-    console.log("Auto-detected number fields:", numberFields); // This should now include 'sankhya'
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Submissions");
 
-    // CSV Headers
-    const headers = [
-      ...allFields.map(label => ({ id: label, title: label })),
-      { id: "createdAt", title: "Submitted At" },
-    ];
+    // Add header
+    const headers = [...allFields, "Submitted At"];
+    sheet.addRow(headers);
+    sheet.getRow(1).eachCell((cell) => {
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.font = { bold: true };
+    });
 
-    // Initialize totals
     const totals = {};
-    numberFields.forEach(label => (totals[label] = 0));
+    numberFields.forEach((label) => (totals[label] = 0));
 
-    // Process submissions
-    const records = submissions.map(sub => {
-      const record = {};
-      allFields.forEach(label => {
-        const val = sub.data[label];
-        record[label] = val ?? "";
-
+    // Add rows
+    submissions.forEach((sub) => {
+      const data = sub.data || {};
+      const row = allFields.map((label) => {
+        const val = data[label] ?? "";
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
         }
+        return val;
       });
-      record.createdAt = new Date(sub.createdAt).toLocaleString();
-      return record;
+
+      row.push(
+        new Date(sub.createdAt).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+        })
+      );
+
+      const addedRow = sheet.addRow(row);
+      addedRow.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      });
     });
 
-    // Add total row if we found any number fields
+    // Add totals row
     if (numberFields.length > 0) {
-      const totalRow = Object.fromEntries(
-        allFields.map(label => [
-          label, 
-          numberFields.includes(label) ? totals[label] : ""
-        ])
+      const totalRow = allFields.map((label) =>
+        numberFields.includes(label) ? totals[label] : ""
       );
-      totalRow.createdAt = "TOTAL";
-      records.push(totalRow);
+      totalRow.push("TOTAL");
+
+      const addedTotalRow = sheet.addRow(totalRow);
+      addedTotalRow.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.font = { bold: true };
+      });
     }
 
-    // Generate CSV
-    const csvWriter = createObjectCsvWriter({
-      path: "submissions.csv",
-      header: headers,
-    });
-    await csvWriter.writeRecords(records);
-
-    res.download("submissions.csv", `submissions_${event._id}.csv`, (err) => {
-      fs.unlink("submissions.csv", () => {});
-      if (err) console.error("Download failed:", err);
+    // Resize columns
+    sheet.columns.forEach((col) => {
+      col.width = 20;
     });
 
+    // Save and send file
+    const tempPath = path.join(__dirname, "submissions.xlsx");
+    await workbook.xlsx.writeFile(tempPath);
+
+    res.download(tempPath, `submissions_${event._id}.xlsx`, (err) => {
+      fs.unlink(tempPath, () => {}); // Clean up
+      if (err) console.error("Download error:", err);
+    });
   } catch (err) {
-    console.error("Error:", err);
-    res.status(500).send("Server error");
+    console.error("XLSX Download Error:", err);
+    res.status(500).send("Error generating Excel");
   }
 });
 
