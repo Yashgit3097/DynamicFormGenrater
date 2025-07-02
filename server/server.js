@@ -447,8 +447,9 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     if (!submissions?.length) return res.status(404).send("No submissions found");
 
     const allFields = event.fields.map(f => f.label);
+    // Only include fields explicitly marked as type "number"
     const numberFields = event.fields
-      .filter(f => f.type.toLowerCase() === "number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
+      .filter(f => f.type.toLowerCase() === "number")
       .map(f => f.label);
 
     const totals = {};
@@ -549,6 +550,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     submissions.forEach((sub, index) => {
       const row = allFields.map(label => {
         const val = sub.data[label] ?? "";
+        // Only process totals for explicitly marked number fields
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
@@ -556,7 +558,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
         return val;
       });
 
-      // ✅ Local IST time format
+      // Local IST time format
       row.push(
         new Date(sub.createdAt).toLocaleString("en-IN", {
           timeZone: "Asia/Kolkata",
@@ -567,7 +569,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       drawRow(row, bg);
     });
 
-    // Totals row
+    // Totals row (only if we have number fields)
     if (numberFields.length > 0) {
       const totalRow = allFields.map(label =>
         numberFields.includes(label) ? totals[label].toString() : ""
@@ -576,7 +578,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       drawRow(totalRow, headerBgColor);
     }
 
-    // ✅ Footer with IST time
+    // Footer with IST time
     page.drawText(
       `Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} | Total submissions: ${submissions.length}`,
       {
