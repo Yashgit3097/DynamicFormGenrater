@@ -447,10 +447,8 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     if (!submissions?.length) return res.status(404).send("No submissions found");
 
     const allFields = event.fields.map(f => f.label);
-
-    // ✅ Only fields explicitly declared as type: "number"
     const numberFields = event.fields
-      .filter(f => f.type.toLowerCase() === "number")
+      .filter(f => f.type.toLowerCase() === "number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
       .map(f => f.label);
 
     const totals = {};
@@ -558,7 +556,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
         return val;
       });
 
-      // ✅ Format time in IST
+      // ✅ Local IST time format
       row.push(
         new Date(sub.createdAt).toLocaleString("en-IN", {
           timeZone: "Asia/Kolkata",
@@ -578,7 +576,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       drawRow(totalRow, headerBgColor);
     }
 
-    // Footer with IST time
+    // ✅ Footer with IST time
     page.drawText(
       `Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} | Total submissions: ${submissions.length}`,
       {
