@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import ExcelJS from 'exceljs';
+import {createCanvas, registerFont} from "canvas";
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -612,6 +613,122 @@ app.get("/api/events/:id/live-view", auth, async (req, res) => {
       res.status(500).send("Error generating PDF");
     }
   });
+
+  app.get("/api/events/:id/download-image", auth, async (req, res) => {
+  try {
+    const submissions = await Submission.find({ eventId: req.params.id });
+    const event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).send("Event not found");
+    if (!submissions?.length) return res.status(404).send("No submissions found");
+
+    // Setup font
+    const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
+    registerFont(fontPath, { family: "Gujarati" });
+
+    const allFields = event.fields.map(f => f.label);
+    const numberFields = event.fields
+      .filter(f => f.type === "number" || f.type === "Number")
+      .map(f => f.label);
+
+    const totals = {};
+    numberFields.forEach(label => (totals[label] = 0));
+
+    // Prepare submission rows
+    const rows = submissions.map(sub => {
+      const row = {};
+      allFields.forEach(label => {
+        const val = sub.data[label] ?? "";
+        row[label] = val;
+        if (numberFields.includes(label)) {
+          const num = Number(val);
+          if (!isNaN(num)) totals[label] += num;
+        }
+      });
+      row["Submitted At"] = new Date(sub.createdAt).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      });
+      return row;
+    });
+
+    const headers = [...allFields, "Submitted At"];
+
+    // Canvas dimensions (adjustable)
+    const rowHeight = 35;
+    const tableWidth = headers.length * 200;
+    const tableHeight = (rows.length + 2) * rowHeight + 120; // extra for heading/desc
+
+    const canvas = createCanvas(tableWidth, tableHeight);
+    const ctx = canvas.getContext("2d");
+
+    // Background
+    ctx.fillStyle = "#F9FAFB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "bold 24px Gujarati";
+    ctx.fillStyle = "#1E293B";
+    ctx.fillText(`📋 ${event.name}`, 30, 40);
+
+    if (event.description) {
+      ctx.font = "18px Gujarati";
+      ctx.fillStyle = "#475569";
+      ctx.fillText(event.description, 30, 70);
+    }
+
+    let y = 100;
+
+    // Draw headers
+    ctx.font = "bold 16px Gujarati";
+    ctx.fillStyle = "#1F2937";
+    headers.forEach((label, i) => {
+      ctx.fillText(
+        numberFields.includes(label) ? `${label} (#)` : label,
+        30 + i * 200,
+        y
+      );
+    });
+
+    y += rowHeight;
+
+    // Draw rows
+    ctx.font = "15px Gujarati";
+    rows.forEach((row, rowIndex) => {
+      const isEven = rowIndex % 2 === 0;
+      ctx.fillStyle = isEven ? "#FFFFFF" : "#F1F5F9";
+      ctx.fillRect(0, y - rowHeight + 10, canvas.width, rowHeight);
+
+      headers.forEach((label, i) => {
+        ctx.fillStyle = "#1F2937";
+        const val = row[label] ?? "";
+        ctx.fillText(val.toString(), 30 + i * 200, y);
+      });
+      y += rowHeight;
+    });
+
+    // Draw totals
+    if (numberFields.length > 0) {
+      ctx.fillStyle = "#E2E8F0";
+      ctx.fillRect(0, y - rowHeight + 10, canvas.width, rowHeight);
+
+      headers.forEach((label, i) => {
+        ctx.fillStyle = "#0F172A";
+        const total = numberFields.includes(label) ? totals[label].toString() : i === headers.length - 1 ? "TOTAL" : "";
+        ctx.font = "bold 15px Gujarati";
+        ctx.fillText(total, 30 + i * 200, y);
+      });
+    }
+
+    // Send image
+    const buffer = canvas.toBuffer("image/png");
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.png"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Image Export Error:", err);
+    res.status(500).send("Error generating image");
+  }
+});
+
 
 
 // Cron job: Delete expired events + submissions after 2 days
