@@ -13,7 +13,9 @@ import {
     LogOut,
     CopyMinus,
     BadgePlus,
-    DiamondPlus
+    DiamondPlus,
+    RefreshCcw,
+    X
 } from "lucide-react";
 
 
@@ -644,14 +646,14 @@ export default function Dashboard() {
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
                                             ) : (
-                                                "🔄 Refresh"
+                                                <div className="flex justify-center items-center gap-2"><RefreshCcw /> <span>Refresh</span></div>
                                             )}
                                         </button>
                                         <button
                                             onClick={closeLiveView}
-                                            className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+                                            className="bg-red-500 hover:bg-red-600 flex justify-center items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
                                         >
-                                            ✕ Close
+                                            <X /> <span>Close</span>
                                         </button>
                                     </div>
                                 </div>
