@@ -454,7 +454,7 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
     const totals = {};
     numberFields.forEach(label => (totals[label] = 0));
 
-    // Load font
+    // Load Gujarati font
     const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
     const fontBytes = fs.readFileSync(fontPath);
 
@@ -555,7 +555,14 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
         }
         return val;
       });
-      row.push(new Date(sub.createdAt).toLocaleString());
+
+      // ✅ Local IST time format
+      row.push(
+        new Date(sub.createdAt).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+        })
+      );
+
       const bg = index % 2 === 0 ? rowBgColor : null;
       drawRow(row, bg);
     });
@@ -569,9 +576,9 @@ app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
       drawRow(totalRow, headerBgColor);
     }
 
-    // Footer
+    // ✅ Footer with IST time
     page.drawText(
-      `Generated on ${new Date().toLocaleString()} | Total submissions: ${submissions.length}`,
+      `Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} | Total submissions: ${submissions.length}`,
       {
         x: margin,
         y: margin - 10,
