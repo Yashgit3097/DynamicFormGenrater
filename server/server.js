@@ -7,7 +7,7 @@ import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import ExcelJs from "exceljs"
+import ExcelJS from 'exceljs';
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
