@@ -7,6 +7,7 @@ import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import Exceljs from "exceljs"
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -163,7 +164,7 @@ app.post("/api/events/:id/submit", async (req, res) => {
   res.json(submission);
 });
 
-app.get("/api/events/:id/download", auth, async (req, res) => {
+app.get("/api/events/:id/download-xlsx", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });
     const event = await Event.findById(req.params.id);
@@ -171,67 +172,82 @@ app.get("/api/events/:id/download", auth, async (req, res) => {
     if (!event) return res.status(404).send("Event not found");
     if (!submissions?.length) return res.status(404).send("No submissions found");
 
-    // Get all field labels and detect number fields (even if not properly typed)
-    const allFields = event.fields.map(f => f.label);
+    const allFields = event.fields.map((f) => f.label);
     const numberFields = event.fields
-      .filter(f => f.type === "number" || f.type === "Number" || /^\d+$/.test(submissions[0]?.data[f.label]?.toString()))
-      .map(f => f.label);
+      .filter((f) => f.type?.toLowerCase() === "number")
+      .map((f) => f.label);
 
-    console.log("Auto-detected number fields:", numberFields); // This should now include 'sankhya'
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Submissions");
 
-    // CSV Headers
-    const headers = [
-      ...allFields.map(label => ({ id: label, title: label })),
-      { id: "createdAt", title: "Submitted At" },
-    ];
+    // Setup header
+    const headerRow = [...allFields, "Submitted At"];
+    sheet.addRow(headerRow);
 
-    // Initialize totals
+    // Center align headers
+    sheet.getRow(1).eachCell((cell) => {
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.font = { bold: true };
+    });
+
     const totals = {};
-    numberFields.forEach(label => (totals[label] = 0));
+    numberFields.forEach((label) => (totals[label] = 0));
 
-    // Process submissions
-    const records = submissions.map(sub => {
-      const record = {};
-      allFields.forEach(label => {
+    // Add data rows
+    submissions.forEach((sub) => {
+      const row = allFields.map((label) => {
         const val = sub.data[label];
-        record[label] = val ?? "";
-
         if (numberFields.includes(label)) {
           const num = Number(val);
           if (!isNaN(num)) totals[label] += num;
         }
+        return val ?? "";
       });
-      record.createdAt = new Date(sub.createdAt).toLocaleString();
-      return record;
+
+      const submittedAt = new Date(sub.createdAt).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      });
+
+      const fullRow = [...row, submittedAt];
+      const addedRow = sheet.addRow(fullRow);
+
+      addedRow.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      });
     });
 
-    // Add total row if we found any number fields
+    // Add totals row
     if (numberFields.length > 0) {
-      const totalRow = Object.fromEntries(
-        allFields.map(label => [
-          label, 
-          numberFields.includes(label) ? totals[label] : ""
-        ])
+      const totalRow = allFields.map((label) =>
+        numberFields.includes(label) ? totals[label] : ""
       );
-      totalRow.createdAt = "TOTAL";
-      records.push(totalRow);
+      totalRow.push("TOTAL");
+
+      const addedTotalRow = sheet.addRow(totalRow);
+      addedTotalRow.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.font = { bold: true };
+      });
     }
 
-    // Generate CSV
-    const csvWriter = createObjectCsvWriter({
-      path: "submissions.csv",
-      header: headers,
-    });
-    await csvWriter.writeRecords(records);
-
-    res.download("submissions.csv", `submissions_${event._id}.csv`, (err) => {
-      fs.unlink("submissions.csv", () => {});
-      if (err) console.error("Download failed:", err);
+    // Adjust column width
+    sheet.columns.forEach((column) => {
+      column.width = 20;
     });
 
+    // Save file to disk temporarily
+    const tempPath = path.join(__dirname, "submissions.xlsx");
+    await workbook.xlsx.writeFile(tempPath);
+
+    res.download(tempPath, `submissions_${event._id}.xlsx`, (err) => {
+      fs.unlink(tempPath, () => {}); // clean up temp file
+      if (err) {
+        console.error("File download error:", err);
+      }
+    });
   } catch (err) {
-    console.error("Error:", err);
-    res.status(500).send("Server error");
+    console.error("Error generating XLSX:", err);
+    res.status(500).send("Error generating Excel file");
   }
 });
 
@@ -438,167 +454,167 @@ app.get("/api/events/:id/live-view", auth, async (req, res) => {
 //   }
 // });
 
-app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
-  try {
-    const submissions = await Submission.find({ eventId: req.params.id });
-    const event = await Event.findById(req.params.id);
+  app.get("/api/events/:id/download-pdf", auth, async (req, res) => {
+    try {
+      const submissions = await Submission.find({ eventId: req.params.id });
+      const event = await Event.findById(req.params.id);
 
-    if (!event) return res.status(404).send("Event not found");
-    if (!submissions?.length) return res.status(404).send("No submissions found");
+      if (!event) return res.status(404).send("Event not found");
+      if (!submissions?.length) return res.status(404).send("No submissions found");
 
-    const allFields = event.fields.map(f => f.label);
-    // Only include fields explicitly marked as type "number"
-    const numberFields = event.fields
-      .filter(f => f.type.toLowerCase() === "number")
-      .map(f => f.label);
+      const allFields = event.fields.map(f => f.label);
+      // Only include fields explicitly marked as type "number"
+      const numberFields = event.fields
+        .filter(f => f.type.toLowerCase() === "number")
+        .map(f => f.label);
 
-    const totals = {};
-    numberFields.forEach(label => (totals[label] = 0));
+      const totals = {};
+      numberFields.forEach(label => (totals[label] = 0));
 
-    // Load Gujarati font
-    const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
-    const fontBytes = fs.readFileSync(fontPath);
+      // Load Gujarati font
+      const fontPath = path.join(__dirname, "fonts", "NotoSansGujarati-Regular.ttf");
+      const fontBytes = fs.readFileSync(fontPath);
 
-    const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
-    const font = await pdfDoc.embedFont(fontBytes);
+      const pdfDoc = await PDFDocument.create();
+      pdfDoc.registerFontkit(fontkit);
+      const font = await pdfDoc.embedFont(fontBytes);
 
-    let page = pdfDoc.addPage([900, 1200]);
-    const { width, height } = page.getSize();
-    const margin = 40;
-    const fontSize = 10;
-    const lineHeight = fontSize + 4;
+      let page = pdfDoc.addPage([900, 1200]);
+      const { width, height } = page.getSize();
+      const margin = 40;
+      const fontSize = 10;
+      const lineHeight = fontSize + 4;
 
-    const primaryColor = rgb(59 / 255, 130 / 255, 246 / 255); // blue-500
-    const headerBgColor = rgb(229 / 255, 231 / 255, 235 / 255); // gray-200
-    const rowBgColor = rgb(249 / 255, 250 / 255, 251 / 255); // gray-50
-    const borderColor = rgb(229 / 255, 231 / 255, 235 / 255); // gray-200
-    const textColor = rgb(31 / 255, 41 / 255, 55 / 255); // gray-800
+      const primaryColor = rgb(59 / 255, 130 / 255, 246 / 255); // blue-500
+      const headerBgColor = rgb(229 / 255, 231 / 255, 235 / 255); // gray-200
+      const rowBgColor = rgb(249 / 255, 250 / 255, 251 / 255); // gray-50
+      const borderColor = rgb(229 / 255, 231 / 255, 235 / 255); // gray-200
+      const textColor = rgb(31 / 255, 41 / 255, 55 / 255); // gray-800
 
-    // Header section
-    page.drawRectangle({
-      x: 0,
-      y: height - 100,
-      width,
-      height: 100,
-      color: primaryColor,
-    });
+      // Header section
+      page.drawRectangle({
+        x: 0,
+        y: height - 100,
+        width,
+        height: 100,
+        color: primaryColor,
+      });
 
-    page.drawText(`Submissions for ${event.name}`, {
-      x: margin,
-      y: height - margin - 20,
-      size: 20,
-      font,
-      color: rgb(1, 1, 1),
-    });
-
-    if (event.description) {
-      page.drawText(event.description, {
+      page.drawText(`Submissions for ${event.name}`, {
         x: margin,
-        y: height - margin - 45,
-        size: 12,
+        y: height - margin - 20,
+        size: 20,
         font,
         color: rgb(1, 1, 1),
       });
-    }
 
-    let y = height - 120;
-    const columns = [...allFields, "Submitted At"];
-    const colWidth = (width - margin * 2) / columns.length;
-
-    const drawRow = (rowValues, bgColor = null) => {
-      const rowHeight = 20;
-
-      if (bgColor) {
-        page.drawRectangle({
+      if (event.description) {
+        page.drawText(event.description, {
           x: margin,
-          y: y - rowHeight,
-          width: width - margin * 2,
-          height: rowHeight,
-          color: bgColor,
-          borderColor,
-          borderWidth: 0.5,
-        });
-      }
-
-      rowValues.forEach((value, i) => {
-        const text = String(value ?? "");
-        page.drawText(text, {
-          x: margin + i * colWidth + 5,
-          y: y - 15,
-          size: fontSize,
+          y: height - margin - 45,
+          size: 12,
           font,
-          color: textColor,
+          color: rgb(1, 1, 1),
         });
-      });
-
-      y -= rowHeight;
-
-      if (y < margin + 50) {
-        page = pdfDoc.addPage([900, 1200]);
-        y = height - margin;
       }
-    };
 
-    // Draw header
-    const headerRow = columns.map(col =>
-      numberFields.includes(col) ? `${col} (#)` : col
-    );
-    drawRow(headerRow, headerBgColor);
+      let y = height - 120;
+      const columns = [...allFields, "Submitted At"];
+      const colWidth = (width - margin * 2) / columns.length;
 
-    // Submissions
-    submissions.forEach((sub, index) => {
-      const row = allFields.map(label => {
-        const val = sub.data[label] ?? "";
-        // Only process totals for explicitly marked number fields
-        if (numberFields.includes(label)) {
-          const num = Number(val);
-          if (!isNaN(num)) totals[label] += num;
+      const drawRow = (rowValues, bgColor = null) => {
+        const rowHeight = 20;
+
+        if (bgColor) {
+          page.drawRectangle({
+            x: margin,
+            y: y - rowHeight,
+            width: width - margin * 2,
+            height: rowHeight,
+            color: bgColor,
+            borderColor,
+            borderWidth: 0.5,
+          });
         }
-        return val;
+
+        rowValues.forEach((value, i) => {
+          const text = String(value ?? "");
+          page.drawText(text, {
+            x: margin + i * colWidth + 5,
+            y: y - 15,
+            size: fontSize,
+            font,
+            color: textColor,
+          });
+        });
+
+        y -= rowHeight;
+
+        if (y < margin + 50) {
+          page = pdfDoc.addPage([900, 1200]);
+          y = height - margin;
+        }
+      };
+
+      // Draw header
+      const headerRow = columns.map(col =>
+        numberFields.includes(col) ? `${col} (#)` : col
+      );
+      drawRow(headerRow, headerBgColor);
+
+      // Submissions
+      submissions.forEach((sub, index) => {
+        const row = allFields.map(label => {
+          const val = sub.data[label] ?? "";
+          // Only process totals for explicitly marked number fields
+          if (numberFields.includes(label)) {
+            const num = Number(val);
+            if (!isNaN(num)) totals[label] += num;
+          }
+          return val;
+        });
+
+        // Local IST time format
+        row.push(
+          new Date(sub.createdAt).toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+          })
+        );
+
+        const bg = index % 2 === 0 ? rowBgColor : null;
+        drawRow(row, bg);
       });
 
-      // Local IST time format
-      row.push(
-        new Date(sub.createdAt).toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-        })
-      );
-
-      const bg = index % 2 === 0 ? rowBgColor : null;
-      drawRow(row, bg);
-    });
-
-    // Totals row (only if we have number fields)
-    if (numberFields.length > 0) {
-      const totalRow = allFields.map(label =>
-        numberFields.includes(label) ? totals[label].toString() : ""
-      );
-      totalRow.push("TOTAL");
-      drawRow(totalRow, headerBgColor);
-    }
-
-    // Footer with IST time
-    page.drawText(
-      `Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} | Total submissions: ${submissions.length}`,
-      {
-        x: margin,
-        y: margin - 10,
-        size: 8,
-        font,
-        color: rgb(0.5, 0.5, 0.5),
+      // Totals row (only if we have number fields)
+      if (numberFields.length > 0) {
+        const totalRow = allFields.map(label =>
+          numberFields.includes(label) ? totals[label].toString() : ""
+        );
+        totalRow.push("TOTAL");
+        drawRow(totalRow, headerBgColor);
       }
-    );
 
-    const pdfBytes = await pdfDoc.save();
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.pdf"`);
-    res.send(Buffer.from(pdfBytes));
-  } catch (err) {
-    console.error("Error generating PDF:", err);
-    res.status(500).send("Error generating PDF");
-  }
-});
+      // Footer with IST time
+      page.drawText(
+        `Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} | Total submissions: ${submissions.length}`,
+        {
+          x: margin,
+          y: margin - 10,
+          size: 8,
+          font,
+          color: rgb(0.5, 0.5, 0.5),
+        }
+      );
+
+      const pdfBytes = await pdfDoc.save();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="submissions_${event._id}.pdf"`);
+      res.send(Buffer.from(pdfBytes));
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      res.status(500).send("Error generating PDF");
+    }
+  });
 
 
 // Cron job: Delete expired events + submissions after 2 days
