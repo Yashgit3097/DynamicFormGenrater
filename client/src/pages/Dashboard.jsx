@@ -146,10 +146,6 @@ export default function Dashboard() {
         newFields.splice(index, 1);
         setFields(newFields);
     };
-    const downloadAsImage = () => {
-        if (!liveViewData?._id) return;
-        window.open(`/api/events/${liveViewData._id}/download-image`, "_blank");
-    };
 
     const downloadCSV = async (id) => {
         try {
@@ -638,7 +634,7 @@ export default function Dashboard() {
                                     <h2 className="text-2xl font-bold text-gray-800 tracking-tight leading-snug">
                                         📊 Live View: <span className="text-blue-700">{liveViewData.eventName}</span>
                                     </h2>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex gap-2">
                                         <button
                                             onClick={refreshLiveView}
                                             disabled={isLoading}
@@ -653,15 +649,6 @@ export default function Dashboard() {
                                                 <div className="flex justify-center items-center gap-2"><RefreshCcw /> <span>Refresh</span></div>
                                             )}
                                         </button>
-
-                                        {/* Download JPG Button */}
-                                        <button
-                                            onClick={downloadAsImage}
-                                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-                                        >
-                                            📥 Download JPG
-                                        </button>
-
                                         <button
                                             onClick={closeLiveView}
                                             className="bg-red-500 hover:bg-red-600 flex justify-center items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
@@ -730,7 +717,6 @@ export default function Dashboard() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
 
             </div>
         </motion.div>
