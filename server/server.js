@@ -164,7 +164,7 @@ app.post("/api/events/:id/submit", async (req, res) => {
   res.json(submission);
 });
 
-app.get("/api/events/:id/download-xlsx", auth, async (req, res) => {
+app.get("/api/events/:id/download", auth, async (req, res) => {
   try {
     const submissions = await Submission.find({ eventId: req.params.id });
     const event = await Event.findById(req.params.id);
