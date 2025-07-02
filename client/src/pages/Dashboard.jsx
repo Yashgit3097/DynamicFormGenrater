@@ -9,7 +9,11 @@ import {
     FileText,
     FileDown,
     Trash2,
-    Link2
+    Link2,
+    LogOut,
+    CopyMinus,
+    BadgePlus,
+    DiamondPlus
 } from "lucide-react";
 
 
@@ -241,19 +245,31 @@ export default function Dashboard() {
         >
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-                    <motion.h1
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-6">
+                    {/* Logo with animation */}
+                    <motion.div
                         initial={{ y: -20 }}
                         animate={{ y: 0 }}
-                        className="text-3xl font-bold text-center md:text-left text-gray-800"
+                        className="flex justify-center md:justify-start"
                     >
-                        Admin Dashboard
-                    </motion.h1>
+                        <img
+                            src="/BringYourOwnFormLogo.png"
+                            alt="Bring Your Own Form Logo"
+                            className="h-24 w-auto object-contain"
+                        />
+                    </motion.div>
+
+                    {/* Welcome Message */}
+                    <div className="text-center md:text-left text-2xl md:text-3xl font-bold text-cyan-800 tracking-tight">
+                        🥳 Welcome to <span>Bring Your Own Form</span> 🥳
+                    </div>
+
+                    {/* Logout Button */}
                     <button
                         onClick={handleLogout}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 self-center md:self-auto cursor-pointer"
+                        className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl shadow-md transition duration-200 flex items-center gap-2 text-sm font-medium self-center md:self-auto"
                     >
-                        Logout
+                        <LogOut size={18} /> <span>Logout</span>
                     </button>
                 </div>
 
@@ -262,54 +278,67 @@ export default function Dashboard() {
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-white shadow-xl rounded-2xl p-6 mb-8 backdrop-blur-sm bg-opacity-90"
+                    className="bg-white/90 backdrop-blur shadow-2xl rounded-2xl px-6 py-8 mb-10"
                 >
-                    <h2 className="text-2xl font-semibold mb-4 text-gray-700">Create New Event</h2>
+                    <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                        Create New Event
+                    </h2>
 
+                    {/* Error Alert */}
                     {error && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded"
+                            className="bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6 text-sm"
                         >
                             <p>{error}</p>
                         </motion.div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {/* Main Input Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Event Name</label>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                Event Name
+                            </label>
                             <input
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Event Name"
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                placeholder="Enter Event Name"
+                                className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                Description
+                            </label>
                             <input
                                 value={desc}
                                 onChange={(e) => setDesc(e.target.value)}
-                                placeholder="Description"
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                placeholder="Enter Description"
+                                className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                Expiry Date
+                            </label>
                             <input
                                 type="datetime-local"
                                 value={expiresAt}
                                 onChange={(e) => setExpiresAt(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                             />
                         </div>
+
                         <div className="flex items-end">
                             <button
                                 onClick={addField}
-                                className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg mr-2 transition-all duration-200 w-full cursor-pointer"
+                                className="w-full px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium flex items-center justify-center gap-2 transition"
                             >
-                                ➕ Add Field
+                                <BadgePlus /> <span>Add Field</span>
                             </button>
                         </div>
                     </div>
@@ -322,36 +351,41 @@ export default function Dashboard() {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2"
+                                className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4"
                             >
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Field Label</label>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                        Field Label
+                                    </label>
                                     <input
                                         value={f.label}
                                         onChange={(e) => handleFieldChange(i, "label", e.target.value)}
-                                        placeholder="Field Label"
-                                        className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="Label"
+                                        className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                                     />
                                 </div>
+
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Field Type</label>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                        Field Type
+                                    </label>
                                     <select
                                         value={f.type}
                                         onChange={(e) => handleFieldChange(i, "type", e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                                     >
                                         <option value="text">Text</option>
                                         <option value="number">Number</option>
                                         <option value="email">Email</option>
                                         <option value="date">Date</option>
                                         <option value="dropdown">Dropdown</option>
-                                        <option value="radio">Radio</option> {/* ✅ New */}
+                                        <option value="radio">Radio</option>
                                     </select>
                                 </div>
 
                                 {(f.type === "dropdown" || f.type === "radio") && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="text-sm font-medium text-gray-700 mb-1 block">
                                             Options (comma-separated)
                                         </label>
                                         <input
@@ -364,11 +398,11 @@ export default function Dashboard() {
                                                 )
                                             }
                                             placeholder="e.g. Yes, No"
-                                            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                                         />
-                                        <small className="text-xs text-gray-500">
-                                            For {f.type} fields: separate values with commas
-                                        </small>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Separate values with commas
+                                        </p>
                                     </div>
                                 )}
 
@@ -376,26 +410,29 @@ export default function Dashboard() {
                                     <button
                                         type="button"
                                         onClick={() => removeField(i)}
-                                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 w-full cursor-pointer"
+                                        className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center gap-2 transition"
                                     >
-                                        ❌ Remove Field
+                                        <CopyMinus /> <span>Remove Field</span>
                                     </button>
                                 </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
 
+                    {/* Create Event Button */}
                     <div className="mt-6 flex justify-end">
                         <button
                             onClick={createEvent}
                             disabled={isCreating}
-                            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-200 flex cursor-pointer items-center ${isCreating ? "opacity-75" : ""
+                            className={`px-6 py-3 rounded-lg font-medium text-white flex items-center gap-2 shadow-md transition ${isCreating
+                                ? "bg-blue-400 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700"
                                 }`}
                         >
                             {isCreating ? (
                                 <>
                                     <svg
-                                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                        className="animate-spin h-5 w-5 text-white"
                                         xmlns="http://www.w3.org/2000/svg"
                                         fill="none"
                                         viewBox="0 0 24 24"
@@ -417,7 +454,9 @@ export default function Dashboard() {
                                     Creating...
                                 </>
                             ) : (
-                                "✅ Create Event"
+                                <>
+                                    <DiamondPlus /> <span>Create Event</span>
+                                </>
                             )}
                         </button>
                     </div>
@@ -429,50 +468,71 @@ export default function Dashboard() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
+                    className="w-full"
                 >
-                    <h2 className="text-2xl font-semibold mb-4 text-gray-700">All Events</h2>
+                    <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center md:text-left">
+                        All Events
+                    </h2>
 
                     {events.length === 0 ? (
-                        <div className="bg-white shadow-lg rounded-xl p-8 text-center">
-                            <p className="text-gray-500">No events created yet. Create your first event above.</p>
+                        <div className="bg-white rounded-2xl shadow-md p-8 text-center border border-dashed border-gray-300">
+                            <p className="text-gray-500 text-lg">No events created yet. Create your first event above.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                             {events.map((ev) => (
                                 <motion.div
                                     key={ev._id}
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
-                                    transition={{ type: "spring", stiffness: 100 }}
+                                    transition={{ type: "spring", stiffness: 120 }}
                                     whileHover={{ scale: 1.02 }}
-                                    className="bg-white shadow-lg rounded-xl p-6 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300"
+                                    className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col justify-between p-6"
                                 >
-                                    <div>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="text-xl font-bold text-gray-800">
+                                    {/* Top Info */}
+                                    <div className="mb-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <h3 className="text-xl font-semibold text-gray-900 leading-tight">
                                                 {ev.name}
                                             </h3>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${new Date(ev.expiresAt) > new Date() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                {new Date(ev.expiresAt) > new Date() ? 'Active' : 'Expired'}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-600 mb-3">{ev.description}</p>
-                                        <div className="flex items-center text-sm mb-4">
-                                            <span className="text-gray-500 mr-2">Expires:</span>
-                                            <span className={`font-medium ${new Date(ev.expiresAt) > new Date() ? 'text-green-600' : 'text-red-600'}`}>
-                                                {new Date(ev.expiresAt) > new Date()
-                                                    ? `${countdowns[ev._id] || 'Calculating...'}`
-                                                    : 'Expired'}
+                                            <span
+                                                className={`text-xs font-medium px-3 py-1 rounded-full ${new Date(ev.expiresAt) > new Date()
+                                                    ? "bg-green-100 text-green-700"
+                                                    : "bg-red-100 text-red-700"
+                                                    }`}
+                                            >
+                                                {new Date(ev.expiresAt) > new Date() ? "Active" : "Expired"}
                                             </span>
                                         </div>
 
+                                        <p className="text-gray-600 text-sm mb-2">
+                                            {ev.description}
+                                        </p>
+
+                                        <div className="flex items-center text-sm mb-4 gap-2">
+                                            <span className="text-gray-500">Expires:</span>
+                                            <span
+                                                className={`font-medium ${new Date(ev.expiresAt) > new Date()
+                                                    ? "text-green-600"
+                                                    : "text-red-600"
+                                                    }`}
+                                            >
+                                                {new Date(ev.expiresAt) > new Date()
+                                                    ? `${countdowns[ev._id] || "Calculating..."}`
+                                                    : "Expired"}
+                                            </span>
+                                        </div>
+
+                                        {/* Fields */}
                                         <div className="mb-4">
-                                            <h4 className="font-semibold text-gray-700 mb-1">Fields:</h4>
+                                            <h4 className="text-sm font-semibold text-gray-700 mb-1">
+                                                Fields:
+                                            </h4>
                                             <div className="flex flex-wrap gap-2">
                                                 {ev.fields.map((field, idx) => (
                                                     <span
                                                         key={idx}
-                                                        className="bg-blue-50 text-blue-800 text-xs px-2 py-1 rounded"
+                                                        className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-full"
                                                     >
                                                         {field.label} ({field.type})
                                                     </span>
@@ -481,12 +541,13 @@ export default function Dashboard() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 mt-4">
+                                    {/* Actions */}
+                                    <div className="flex flex-wrap gap-2 mt-auto">
                                         <Link
                                             to={`/form/${ev._id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 underline flex items-center jus text-sm cursor-pointer gap-1"
+                                            className="text-blue-600 hover:text-blue-800 underline text-sm font-medium flex items-center gap-1"
                                         >
                                             <Link2 size={16} />
                                             Open Form
@@ -502,49 +563,48 @@ export default function Dashboard() {
                                                     })
                                                     .catch(() => alert("Failed to copy link."));
                                             }}
-                                            className={`flex items-center gap-1 px-3 py-1 rounded-lg cursor-pointer text-sm text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
+                                            className={`flex items-center gap-1 px-3 py-1 rounded-md text-sm font-medium text-white ${isCopied ? "bg-green-500 hover:bg-green-600" : "bg-blue-500 hover:bg-blue-600"
                                                 }`}
                                             whileTap={{ scale: 0.95 }}
                                             animate={{ backgroundColor: isCopied ? "#22c55e" : "#3b82f6" }}
                                             transition={{ duration: 0.2 }}
                                         >
                                             {isCopied ? <Check size={16} /> : <Copy size={16} />}
-                                            <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
+                                            <span>{isCopied ? "Copied!" : "Copy Link"}</span>
                                         </motion.button>
 
                                         <button
                                             onClick={() => fetchLiveView(ev._id)}
-                                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
+                                            className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium px-3 py-1 rounded-md flex items-center gap-1"
                                         >
                                             <Eye size={16} />
-                                            <span>Live View</span>
+                                            Live View
                                         </button>
 
                                         <button
                                             onClick={() => downloadCSV(ev._id)}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
+                                            className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded-md flex items-center gap-1"
                                         >
                                             <FileText size={16} />
-                                            <span>Export CSV</span>
+                                            Export CSV
                                         </button>
 
                                         <button
                                             onClick={() => downloadPDF(ev._id)}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
+                                            className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1 rounded-md flex items-center gap-1"
                                         >
                                             <FileDown size={16} />
-                                            <span>Download PDF</span>
+                                            Download PDF
                                         </button>
 
                                         <button
                                             onClick={() => deleteEvent(ev._id)}
-                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors duration-200 cursor-pointer flex items-center gap-1"
+                                            className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded-md flex items-center gap-1"
                                         >
                                             <Trash2 size={16} />
-                                            <span>Delete</span>
+                                            Delete
                                         </button>
                                     </div>
-
                                 </motion.div>
                             ))}
                         </div>
@@ -565,55 +625,49 @@ export default function Dashboard() {
                                 initial={{ scale: 0.9, y: 20 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.9, y: 20 }}
-                                className="bg-white/95 backdrop-blur-lg rounded-xl p-4 md:p-6 w-full max-w-6xl max-h-[90vh] overflow-auto shadow-2xl border border-white/20"
+                                className="bg-white/95 backdrop-blur-lg rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-auto shadow-2xl border border-gray-200"
                             >
                                 {/* Header */}
-                                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
-                                    <h2 className="text-xl md:text-2xl font-bold text-gray-800">
-                                        Live View: {liveViewData.eventName}
+                                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800 tracking-tight leading-snug">
+                                        📊 Live View: <span className="text-blue-700">{liveViewData.eventName}</span>
                                     </h2>
-                                    <div className="flex gap-2 justify-end">
+                                    <div className="flex gap-2">
                                         <button
                                             onClick={refreshLiveView}
                                             disabled={isLoading}
-                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors cursor-pointer"
+                                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
                                         >
                                             {isLoading ? (
-                                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
                                             ) : (
-                                                '🔄'
+                                                "🔄 Refresh"
                                             )}
-                                            Refresh
                                         </button>
                                         <button
                                             onClick={closeLiveView}
-                                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                                            className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
                                         >
                                             ✕ Close
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Table Container */}
-                                <div className="overflow-x-auto rounded-lg border border-gray-200/80">
-                                    <table className="min-w-full bg-white/95">
-                                        <thead className="bg-gray-100">
+                                {/* Table */}
+                                <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+                                    <table className="min-w-full text-sm text-gray-800">
+                                        <thead className="bg-gray-100 text-gray-700 font-semibold sticky top-0 z-10">
                                             <tr>
                                                 {liveViewData.fields.map((field, i) => (
-                                                    <th
-                                                        key={i}
-                                                        className="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700"
-                                                    >
+                                                    <th key={i} className="px-4 py-3 border-b border-gray-200 text-left whitespace-nowrap">
                                                         {field}
-                                                        {liveViewData.numberFields.includes(field) && ' (#'}
+                                                        {liveViewData.numberFields.includes(field) && <span className="text-gray-500"> (#)</span>}
                                                     </th>
                                                 ))}
-                                                <th className="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                                    Submitted At
-                                                </th>
+                                                <th className="px-4 py-3 border-b border-gray-200 text-left whitespace-nowrap">Submitted At</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -622,42 +676,38 @@ export default function Dashboard() {
                                                     key={rowIndex}
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
-                                                    className={rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                                                    className={`${rowIndex % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
                                                 >
                                                     {liveViewData.fields.map((field, i) => (
-                                                        <td
-                                                            key={i}
-                                                            className="py-3 px-4 border-b border-gray-200 text-sm"
-                                                        >
-                                                            {row[field]}
+                                                        <td key={i} className="px-4 py-3 border-b border-gray-200">
+                                                            {row[field] || <span className="text-gray-400 italic">–</span>}
                                                         </td>
                                                     ))}
-                                                    <td className="py-3 px-4 border-b border-gray-200 text-sm">
+                                                    <td className="px-4 py-3 border-b border-gray-200">
                                                         {formatToIST(row.createdAt)}
                                                     </td>
                                                 </motion.tr>
                                             ))}
+
+                                            {/* Totals Row */}
                                             {liveViewData.totals && (
-                                                <tr className="bg-gray-200 font-bold">
+                                                <tr className="bg-blue-50 font-semibold text-gray-800">
                                                     {liveViewData.fields.map((field, i) => (
-                                                        <td
-                                                            key={i}
-                                                            className="py-3 px-4 border-b border-gray-200 text-sm"
-                                                        >
-                                                            {liveViewData.numberFields.includes(field) ? liveViewData.totals[field] : ''}
+                                                        <td key={i} className="px-4 py-3 border-t border-gray-300">
+                                                            {liveViewData.numberFields.includes(field)
+                                                                ? liveViewData.totals[field]
+                                                                : ""}
                                                         </td>
                                                     ))}
-                                                    <td className="py-3 px-4 border-b border-gray-200 text-sm">
-                                                        TOTAL
-                                                    </td>
+                                                    <td className="px-4 py-3 border-t border-gray-300">TOTAL</td>
                                                 </tr>
                                             )}
                                         </tbody>
                                     </table>
                                 </div>
 
-                                {/* Footer */}
-                                <div className="mt-4 text-sm text-gray-500">
+                                {/* Footer Info */}
+                                <div className="mt-6 text-sm text-gray-500 border-t pt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                     <p>Last updated: {new Date(liveViewData.lastUpdated).toLocaleString()}</p>
                                     <p>Total submissions: {liveViewData.submissions.length}</p>
                                 </div>
@@ -665,7 +715,6 @@ export default function Dashboard() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
 
             </div>
         </motion.div>
