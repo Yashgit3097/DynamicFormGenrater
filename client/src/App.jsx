@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import UserForm from "./pages/UserForm";
 import ProtectedRoute from "./components/ProtectedRoute";
+import InstallPWA from "./components/InstallPWA";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           }
         />
       </Routes>
+      <InstallPWA />
     </HashRouter>
   );
 }
